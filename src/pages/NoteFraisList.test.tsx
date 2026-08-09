@@ -1,0 +1,282 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { ApiError } from '../api/client'
+import { NoteFraisList } from './NoteFraisList'
+import type { NoteFraisDto, UserDto } from '../api/types'
+
+const {
+  findByEsnYearMock,
+  findByConsultantYearMock,
+  totalsByMonthMock,
+  totalsByCategoryMock,
+  createMock,
+  submitMock,
+  validateMock,
+  rejectMock,
+  deleteMock,
+  summariesMock,
+  userMock,
+} = vi.hoisted(() => ({
+  findByEsnYearMock: vi.fn(),
+  findByConsultantYearMock: vi.fn(),
+  totalsByMonthMock: vi.fn(),
+  totalsByCategoryMock: vi.fn(),
+  createMock: vi.fn(),
+  submitMock: vi.fn(),
+  validateMock: vi.fn(),
+  rejectMock: vi.fn(),
+  deleteMock: vi.fn(),
+  summariesMock: vi.fn(),
+  userMock: { value: null as unknown as UserDto },
+}))
+
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({
+    user: userMock.value,
+    initializing: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    setUser: vi.fn(),
+    refreshMe: vi.fn(),
+  }),
+}))
+
+vi.mock('../api/noteFrais', () => ({
+  noteFraisApi: {
+    findByEsnYear: findByEsnYearMock,
+    findByConsultantYear: findByConsultantYearMock,
+    getById: vi.fn(),
+    create: createMock,
+    update: vi.fn(),
+    submit: submitMock,
+    validate: validateMock,
+    reject: rejectMock,
+    delete: deleteMock,
+    totalsByMonth: totalsByMonthMock,
+    totalsByCategory: totalsByCategoryMock,
+    totalsByConsultant: vi.fn(),
+  },
+}))
+
+vi.mock('../api/consultants', () => ({
+  consultantsApi: { summaries: summariesMock },
+}))
+
+const managerUser = {
+  id: 1,
+  username: 'manager',
+  email: 'manager@esn.fr',
+  firstName: 'M',
+  lastName: 'Manager',
+  phone: null,
+  role: 'MANAGER',
+  active: true,
+  esnId: 5,
+  esnName: 'ESN Test',
+  consultantId: null,
+  mustChangePassword: false,
+  lastLoginAt: null,
+} as UserDto
+
+const consultantUser = {
+  ...managerUser,
+  id: 2,
+  role: 'CONSULTANT',
+  esnId: null,
+  esnName: null,
+  consultantId: 10,
+} as UserDto
+
+const nf = (overrides: Partial<NoteFraisDto> = {}): NoteFraisDto => ({
+  id: 1,
+  consultantId: 10,
+  consultantName: 'Alice Martin',
+  esnId: 5,
+  month: 8,
+  year: 2026,
+  status: 'DRAFT',
+  totalAmount: 125.5,
+  submittedAt: null,
+  validatedAt: null,
+  paidAt: null,
+  comment: null,
+  lines: [
+    {
+      id: 1,
+      date: '2026-08-01',
+      category: 'Restaurant',
+      label: 'Déjeuner client',
+      amount: 125.5,
+      reimbursed: false,
+      comment: null,
+    },
+  ],
+  ...overrides,
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  userMock.value = null as unknown as UserDto
+})
+
+function renderList() {
+  return render(
+    <MemoryRouter initialEntries={['/note-frais']}>
+      <NoteFraisList />
+    </MemoryRouter>,
+  )
+}
+
+describe('NoteFraisList', () => {
+  it('affiche le tableau, les totaux et les graphiques pour un manager', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockResolvedValue([nf()])
+    totalsByMonthMock.mockResolvedValue({ '8': 125.5 })
+    totalsByCategoryMock.mockResolvedValue({ Restaurant: 125.5 })
+    summariesMock.mockResolvedValue([])
+
+    renderList()
+
+    expect(await screen.findByText('Alice Martin')).toBeInTheDocument()
+    expect(findByEsnYearMock).toHaveBeenCalledWith(5, 2026)
+    expect(screen.getByText('Août 2026')).toBeInTheDocument()
+    expect(screen.getByText('Brouillon')).toBeInTheDocument()
+    expect(screen.getByText('Total 2026')).toBeInTheDocument()
+    expect(screen.getByText('Montants par mois')).toBeInTheDocument()
+    expect(screen.getByText('Montants par catégorie')).toBeInTheDocument()
+    expect(screen.getByText('Restaurant · 125,50 €')).toBeInTheDocument()
+    expect(screen.getAllByText('125,50 €').length).toBeGreaterThan(0)
+  })
+
+  it('affiche l’état vide pour un consultant et appelle l’API avec son identifiant', async () => {
+    userMock.value = consultantUser
+    findByConsultantYearMock.mockResolvedValue([])
+
+    renderList()
+
+    expect(await screen.findByText('Aucune note de frais pour 2026')).toBeInTheDocument()
+    expect(findByConsultantYearMock).toHaveBeenCalledWith(10, 2026)
+    expect(screen.queryByText('Montants par mois')).not.toBeInTheDocument()
+  })
+
+  it('soumet une note de frais au statut Brouillon', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockResolvedValue([nf()])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    submitMock.mockResolvedValue(nf({ status: 'SUBMITTED' }))
+
+    renderList()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Soumettre' }))
+
+    await waitFor(() => expect(submitMock).toHaveBeenCalledWith(1))
+  })
+
+  it('valide une note de frais soumise', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockResolvedValue([nf({ status: 'SUBMITTED' })])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    validateMock.mockResolvedValue(nf({ status: 'VALIDATED' }))
+
+    renderList()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Valider' }))
+
+    await waitFor(() => expect(validateMock).toHaveBeenCalledWith(1))
+  })
+
+  it('rejette une note de frais avec le motif saisi', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockResolvedValue([nf({ status: 'SUBMITTED' })])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    rejectMock.mockResolvedValue(nf({ status: 'REJECTED', comment: 'Justificatif manquant' }))
+    vi.stubGlobal('prompt', vi.fn().mockReturnValue('Justificatif manquant'))
+
+    renderList()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rejeter' }))
+
+    await waitFor(() => expect(rejectMock).toHaveBeenCalledWith(1, 'Justificatif manquant'))
+  })
+
+  it('supprime une note de frais après confirmation', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockResolvedValue([nf()])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    deleteMock.mockResolvedValue(undefined)
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
+
+    renderList()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Suppr.' }))
+
+    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1))
+  })
+
+  it('crée une note de frais depuis le formulaire', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockResolvedValue([])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([
+      { id: 10, fullName: 'Alice Martin', position: 'Consultante', email: 'alice@esn.fr' },
+    ])
+    createMock.mockResolvedValue(nf())
+
+    renderList()
+
+    const today = new Date().toISOString().slice(0, 10)
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Nouvelle note de frais' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const selects = within(dialog).getAllByRole('combobox')
+    fireEvent.change(selects[0], { target: { value: '10' } })
+    fireEvent.change(within(dialog).getByPlaceholderText('Libellé'), {
+      target: { value: 'Train' },
+    })
+    fireEvent.change(within(dialog).getByPlaceholderText('Montant €'), {
+      target: { value: '45' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }))
+
+    await waitFor(() =>
+      expect(createMock).toHaveBeenCalledWith({
+        consultantId: 10,
+        month: 8,
+        year: 2026,
+        lines: [
+          {
+            date: today,
+            category: 'Déplacement',
+            label: 'Train',
+            amount: 45,
+            reimbursed: false,
+            comment: null,
+          },
+        ],
+      }),
+    )
+  })
+
+  it('affiche l’erreur API dans un bloc d’erreur', async () => {
+    userMock.value = managerUser
+    findByEsnYearMock.mockRejectedValue(new ApiError(500, 'Erreur serveur'))
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+
+    renderList()
+
+    expect(await screen.findByText('Erreur serveur')).toBeInTheDocument()
+  })
+})

@@ -1,0 +1,335 @@
+import { useState, type FormEvent } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { projectsApi } from '../api/projects'
+import { clientsApi } from '../api/clients'
+import { esnsApi } from '../api/esns'
+import { ApiError } from '../api/client'
+import { useAsync } from '../lib/useAsync'
+import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
+import { Badge, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
+import { formatDate, formatMoney } from '../lib/format'
+import type { ProjectDto } from '../api/types'
+
+interface FormState {
+  name: string
+  description: string
+  clientId: string
+  esnId: string
+  startDate: string
+  endDate: string
+  dailyRate: string
+  currency: string
+  active: boolean
+}
+
+const emptyForm: FormState = {
+  name: '',
+  description: '',
+  clientId: '',
+  esnId: '',
+  startDate: '',
+  endDate: '',
+  dailyRate: '',
+  currency: 'EUR',
+  active: true,
+}
+
+export function Projects() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN'
+
+  const { data, loading, error, reload, setData } = useAsync(
+    () => projectsApi.findAll(isAdmin ? undefined : { esnId: user?.esnId ?? undefined }),
+    [user?.esnId, isAdmin],
+  )
+  const { data: clients } = useAsync(
+    () => clientsApi.findAll(isAdmin ? undefined : user?.esnId ?? undefined),
+    [user?.esnId, isAdmin],
+  )
+  const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
+
+  const [editing, setEditing] = useState<ProjectDto | null>(null)
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  function openCreate() {
+    setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') })
+    setEditing(null)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(project: ProjectDto) {
+    setForm({
+      name: project.name,
+      description: project.description ?? '',
+      clientId: String(project.client?.id ?? ''),
+      esnId: String(project.esn?.id ?? user?.esnId ?? ''),
+      startDate: project.startDate ?? '',
+      endDate: project.endDate ?? '',
+      dailyRate: project.dailyRate != null ? String(project.dailyRate) : '',
+      currency: project.currency ?? 'EUR',
+      active: project.active,
+    })
+    setEditing(project)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) {
+      setFormError('Le nom du projet est obligatoire')
+      return
+    }
+    if (!form.clientId) {
+      setFormError('Sélectionnez un client')
+      return
+    }
+    if (isAdmin && !form.esnId) {
+      setFormError('Sélectionnez la société (ESN)')
+      return
+    }
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const payload = {
+        name: form.name.trim(),
+        description: form.description || null,
+        clientId: Number(form.clientId),
+        esnId: isAdmin ? Number(form.esnId) : user?.esnId ?? 0,
+        startDate: form.startDate || null,
+        endDate: form.endDate || null,
+        dailyRate: form.dailyRate ? Number(form.dailyRate) : null,
+        currency: form.currency || 'EUR',
+        active: form.active,
+      }
+      if (editing) {
+        await projectsApi.update(editing.id, payload)
+      } else {
+        await projectsApi.create(payload)
+      }
+      setModalOpen(false)
+      reload()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDelete(project: ProjectDto) {
+    if (!window.confirm(`Supprimer le projet « ${project.name} » ?`)) return
+    try {
+      await projectsApi.delete(project.id)
+      setData((data ?? []).filter((p) => p.id !== project.id))
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Projets"
+        subtitle="Les projets par client et leurs conditions commerciales"
+        actions={
+          canEdit ? (
+            <Button className="w-auto" onClick={openCreate}>
+              + Nouveau projet
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {error && <ErrorBlock message={error} />}
+      {loading && <LoadingBlock />}
+      {!loading && data && (
+        <Table
+          rowKey={(p) => p.id}
+          onRowClick={canEdit ? openEdit : undefined}
+          rows={data}
+          columns={[
+            {
+              key: 'name',
+              label: 'Projet',
+              render: (p) => (
+                <div>
+                  <p className="font-medium text-gray-900">{p.name}</p>
+                  {p.description && <p className="text-xs text-gray-500">{p.description}</p>}
+                </div>
+              ),
+            },
+            {
+              key: 'client',
+              label: 'Client',
+              render: (p) => <span>{p.client?.name ?? '—'}</span>,
+            },
+            {
+              key: 'dates',
+              label: 'Période',
+              render: (p) => (
+                <span className="text-gray-500">
+                  {formatDate(p.startDate)} → {formatDate(p.endDate)}
+                </span>
+              ),
+            },
+            {
+              key: 'rate',
+              label: 'TJM',
+              render: (p) => (
+                <span className="font-medium text-gray-900">
+                  {formatMoney(p.dailyRate, p.currency)}
+                </span>
+              ),
+            },
+            {
+              key: 'esn',
+              label: 'ESN',
+              render: (p) => (isAdmin ? <span>{p.esn?.name ?? '—'}</span> : <span>—</span>),
+            },
+            {
+              key: 'active',
+              label: 'Statut',
+              render: (p) => (
+                <Badge kind={p.active ? 'success' : 'muted'}>{p.active ? 'Actif' : 'Inactif'}</Badge>
+              ),
+            },
+            {
+              key: 'actions',
+              label: '',
+              render: (p) =>
+                canEdit ? (
+                  <div className="flex justify-end gap-1">
+                    <InlineButton onClick={(e) => { e.stopPropagation(); openEdit(p) }}>
+                      Modifier
+                    </InlineButton>
+                    <InlineButton
+                      className="text-red-600 hover:bg-red-50"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(p) }}
+                    >
+                      Supprimer
+                    </InlineButton>
+                  </div>
+                ) : (
+                  <></>
+                ),
+            },
+          ]}
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? `Modifier ${editing.name}` : 'Nouveau projet'}
+        footer={
+          <>
+            <InlineButton onClick={() => setModalOpen(false)}>Annuler</InlineButton>
+            <Button className="w-auto" onClick={handleSubmit as never} disabled={submitting}>
+              {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+              {editing ? 'Enregistrer' : 'Créer'}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {formError}
+            </div>
+          )}
+          <Field label="Nom du projet *">
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          </Field>
+          <Field label="Description">
+            <Textarea
+              rows={2}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Client *">
+              <Select
+                value={form.clientId}
+                onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+              >
+                <option value="">Sélectionner…</option>
+                {(clients ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {isAdmin && (
+              <Field label="Société (ESN)">
+                <Select
+                  value={form.esnId}
+                  onChange={(e) => setForm({ ...form, esnId: e.target.value })}
+                >
+                  <option value="">Sélectionner…</option>
+                  {(esns ?? []).map((esn) => (
+                    <option key={esn.id} value={esn.id}>
+                      {esn.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Début">
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Fin">
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="TJM">
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.dailyRate}
+                onChange={(e) => setForm({ ...form, dailyRate: e.target.value })}
+              />
+            </Field>
+            <Field label="Devise">
+              <Select
+                value={form.currency}
+                onChange={(e) => setForm({ ...form, currency: e.target.value })}
+              >
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="CHF">CHF</option>
+              </Select>
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            />
+            Projet actif
+          </label>
+        </form>
+      </Modal>
+    </div>
+  )
+}

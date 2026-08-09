@@ -1,0 +1,533 @@
+import { useMemo, useState, type FormEvent } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { consultantsApi } from '../api/consultants'
+import { esnsApi } from '../api/esns'
+import { ApiError } from '../api/client'
+import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import {
+  Badge,
+  EmptyState,
+  ErrorBlock,
+  LoadingBlock,
+  Modal,
+  PageHeader,
+  Pagination,
+  Table,
+} from '../components/data'
+import { formatDate, formatMoney } from '../lib/format'
+import { useAsync } from '../lib/useAsync'
+import type { ConsultantDto, ConsultantSummary } from '../api/types'
+import { useCallback, useEffect } from 'react'
+
+interface FormState {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  position: string
+  hireDate: string
+  birthDate: string
+  socialNumber: string
+  baseSalary: string
+  currency: string
+  nationality: string
+  esnId: string
+  managerId: string
+  username: string
+  password: string
+}
+
+const emptyForm: FormState = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  position: '',
+  hireDate: '',
+  birthDate: '',
+  socialNumber: '',
+  baseSalary: '',
+  currency: 'EUR',
+  nationality: '',
+  esnId: '',
+  managerId: '',
+  username: '',
+  password: '',
+}
+
+export function Consultants() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN'
+
+  const [search, setSearch] = useState('')
+  const [debounced, setDebounced] = useState('')
+  const [page, setPage] = useState(0)
+  const size = 20
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebounced(search)
+      setPage(0)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const { data, loading, error, reload, setData } = useAsync(
+    () =>
+      consultantsApi.findAll({
+        esnId: isAdmin ? undefined : user?.esnId ?? undefined,
+        search: debounced || undefined,
+        page,
+        size,
+      }),
+    [user?.esnId, isAdmin, debounced, page, size],
+  )
+
+  const { data: summaries } = useAsync(
+    () => (user?.esnId ? consultantsApi.summaries(user.esnId) : Promise.resolve([] as ConsultantSummary[])),
+    [user?.esnId],
+  )
+
+  const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
+
+  const [editing, setEditing] = useState<ConsultantDto | null>(null)
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importResult, setImportResult] = useState<{ imported: number; errors: number; errorLines: string[] } | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+
+  const managerOptions = useMemo(
+    () => (summaries ?? []).filter((s) => s.id !== editing?.id),
+    [summaries, editing],
+  )
+
+  function openCreate() {
+    setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') })
+    setEditing(null)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(c: ConsultantDto) {
+    setForm({
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email ?? '',
+      phone: c.phone ?? '',
+      position: c.position ?? '',
+      hireDate: c.hireDate ?? '',
+      birthDate: c.birthDate ?? '',
+      socialNumber: c.socialNumber ?? '',
+      baseSalary: c.baseSalary != null ? String(c.baseSalary) : '',
+      currency: c.currency ?? 'EUR',
+      nationality: c.nationality ?? '',
+      esnId: String(c.esnId ?? user?.esnId ?? ''),
+      managerId: c.managerId != null ? String(c.managerId) : '',
+      username: c.username ?? '',
+      password: '',
+    })
+    setEditing(c)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      setFormError('Le prénom et le nom sont obligatoires')
+      return
+    }
+    if (isAdmin && !form.esnId) {
+      setFormError('Sélectionnez la société (ESN)')
+      return
+    }
+    const creatingAccount = !editing && !!form.username.trim()
+    if (creatingAccount && (!form.email.trim() || !form.password.trim())) {
+      setFormError('Email et mot de passe requis pour créer un compte utilisateur')
+      return
+    }
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const payload = {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone || null,
+        position: form.position || null,
+        hireDate: form.hireDate || null,
+        birthDate: form.birthDate || null,
+        socialNumber: form.socialNumber || null,
+        baseSalary: form.baseSalary ? Number(form.baseSalary) : null,
+        currency: form.currency || 'EUR',
+        nationality: form.nationality || null,
+        esnId: isAdmin ? Number(form.esnId) : user?.esnId ?? 0,
+        managerId: form.managerId ? Number(form.managerId) : null,
+        username: creatingAccount ? form.username.trim() : null,
+        password: creatingAccount ? form.password : null,
+      }
+      if (editing) {
+        await consultantsApi.update(editing.id, payload)
+      } else {
+        await consultantsApi.create(payload)
+      }
+      setModalOpen(false)
+      reload()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDelete(c: ConsultantDto) {
+    if (!window.confirm(`Supprimer le consultant ${c.firstName} ${c.lastName} ?\nLes CRA, notes de frais et documents associés seront supprimés.`)) return
+    try {
+      await consultantsApi.delete(c.id)
+      setData({ ...data!, items: data?.items.filter((x) => x.id !== c.id) ?? [] })
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function handleImport(e: FormEvent) {
+    e.preventDefault()
+    if (!importFile) return
+    setImporting(true)
+    setImportError(null)
+    setImportResult(null)
+    try {
+      const result = await consultantsApi.importCsv(importFile, Number(isAdmin ? form.esnId : user?.esnId))
+      setImportResult(result)
+      reload()
+    } catch (err) {
+      setImportError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const loadingOk = useCallback(() => !loading, [loading])
+
+  return (
+    <div>
+      <PageHeader
+        title="Consultants"
+        subtitle="Gérez votre équipe de consultants"
+        actions={
+          canEdit ? (
+            <>
+              <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') }) }}>
+                Importer CSV
+              </InlineButton>
+              <Button className="w-auto" onClick={openCreate}>
+                + Nouveau consultant
+              </Button>
+            </>
+          ) : undefined
+        }
+      />
+
+      <div className="mb-4">
+        <Input
+          placeholder="Rechercher par nom, email, poste…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
+      {error && <ErrorBlock message={error} />}
+      {loading && <LoadingBlock />}
+
+      {!loading && data && (
+        <>
+          <Table
+            rowKey={(c) => c.id}
+            onRowClick={canEdit ? openEdit : undefined}
+            rows={data.items}
+            columns={[
+              {
+                key: 'name',
+                label: 'Consultant',
+                render: (c) => (
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {c.firstName} {c.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">{c.position ?? '—'}</p>
+                  </div>
+                ),
+              },
+              {
+                key: 'contact',
+                label: 'Contact',
+                render: (c) => (
+                  <div>
+                    {c.email && <p className="text-gray-700">{c.email}</p>}
+                    {c.phone && <p className="text-xs text-gray-500">{c.phone}</p>}
+                    {!c.email && !c.phone && <span className="text-gray-400">—</span>}
+                  </div>
+                ),
+              },
+              {
+                key: 'manager',
+                label: 'Manager',
+                render: (c) => <span>{c.managerName ?? '—'}</span>,
+              },
+              {
+                key: 'salary',
+                label: 'Salaire',
+                render: (c) => (
+                  <span>{formatMoney(c.baseSalary, c.currency ?? 'EUR')}</span>
+                ),
+              },
+              {
+                key: 'hire',
+                label: 'Embauche',
+                render: (c) => <span className="text-gray-500">{formatDate(c.hireDate)}</span>,
+              },
+              {
+                key: 'account',
+                label: 'Compte',
+                render: (c) =>
+                  c.hasUserAccount ? (
+                    <Badge kind="success">Oui</Badge>
+                  ) : (
+                    <Badge kind="muted">Non</Badge>
+                  ),
+              },
+              {
+                key: 'active',
+                label: 'Statut',
+                render: (c) => (
+                  <Badge kind={c.active ? 'success' : 'muted'}>
+                    {c.active ? 'Actif' : 'Inactif'}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'actions',
+                label: '',
+                render: (c) =>
+                  canEdit ? (
+                    <div className="flex justify-end gap-1">
+                      <InlineButton onClick={(e) => { e.stopPropagation(); openEdit(c) }}>
+                        Modifier
+                      </InlineButton>
+                      <InlineButton
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                      >
+                        Supprimer
+                      </InlineButton>
+                    </div>
+                  ) : (
+                    <></>
+                  ),
+              },
+            ]}
+          />
+          <Pagination
+            page={data.page}
+            totalPages={data.totalPages}
+            total={data.total}
+            onChange={setPage}
+          />
+        </>
+      )}
+
+      {!loading && data && data.items.length === 0 && (
+        <EmptyState
+          title="Aucun consultant"
+          description="Ajoutez un consultant ou importez un fichier CSV."
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? `Modifier ${editing.firstName} ${editing.lastName}` : 'Nouveau consultant'}
+        size="lg"
+        footer={
+          <>
+            <InlineButton onClick={() => setModalOpen(false)}>Annuler</InlineButton>
+            <Button className="w-auto" onClick={handleSubmit as never} disabled={submitting}>
+              {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+              {editing ? 'Enregistrer' : 'Créer'}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {formError}
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Prénom *">
+              <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
+            </Field>
+            <Field label="Nom *">
+              <Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Email">
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </Field>
+            <Field label="Téléphone">
+              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Poste">
+              <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
+            </Field>
+            <Field label="Nationalité">
+              <Input value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} placeholder="FR" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Date d'embauche">
+              <Input type="date" value={form.hireDate} onChange={(e) => setForm({ ...form, hireDate: e.target.value })} />
+            </Field>
+            <Field label="Date de naissance">
+              <Input type="date" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="N° de sécurité sociale">
+              <Input value={form.socialNumber} onChange={(e) => setForm({ ...form, socialNumber: e.target.value })} />
+            </Field>
+            <Field label="Manager">
+              <Select value={form.managerId} onChange={(e) => setForm({ ...form, managerId: e.target.value })}>
+                <option value="">Aucun</option>
+                {managerOptions.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.fullName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Salaire de base">
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.baseSalary}
+                onChange={(e) => setForm({ ...form, baseSalary: e.target.value })}
+              />
+            </Field>
+            <Field label="Devise">
+              <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="CHF">CHF</option>
+              </Select>
+            </Field>
+          </div>
+          {isAdmin && (
+            <Field label="Société (ESN)">
+              <Select value={form.esnId} onChange={(e) => setForm({ ...form, esnId: e.target.value })}>
+                <option value="">Sélectionner…</option>
+                {(esns ?? []).map((esn) => (
+                  <option key={esn.id} value={esn.id}>
+                    {esn.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          {!editing && (
+            <div className="rounded-lg border border-brand-200 bg-brand-50 p-3">
+              <p className="mb-2 text-sm font-medium text-brand-800">
+                Compte utilisateur (optionnel)
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Field label="Nom d'utilisateur">
+                  <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+                </Field>
+                <Field label="Email de connexion">
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </Field>
+                <Field label="Mot de passe initial">
+                  <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                </Field>
+              </div>
+              <p className="mt-2 text-xs text-brand-700">
+                Le consultant devra changer son mot de passe à la première connexion.
+              </p>
+            </div>
+          )}
+        </form>
+      </Modal>
+
+      <Modal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Importer des consultants (CSV)"
+        footer={
+          <>
+            <InlineButton onClick={() => setImportOpen(false)}>Fermer</InlineButton>
+            <Button className="w-auto" onClick={handleImport as never} disabled={importing || !importFile}>
+              {importing ? <Spinner className="border-white border-t-transparent" /> : 'Importer'}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleImport} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Format attendu : <code className="rounded bg-gray-100 px-1">prénom,nom,email,téléphone,poste,dateEmbauche(AAAA-MM-JJ),dateNaissance,NSS,salaire,devise,nationalité</code>
+          </p>
+          {isAdmin && (
+            <Field label="Société (ESN)">
+              <Select value={form.esnId} onChange={(e) => setForm({ ...form, esnId: e.target.value })}>
+                <option value="">Sélectionner…</option>
+                {(esns ?? []).map((esn) => (
+                  <option key={esn.id} value={esn.id}>
+                    {esn.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+            className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-700"
+          />
+          {importError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {importError}
+            </div>
+          )}
+          {importResult && (
+            <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              {importResult.imported} consultant(s) importé(s), {importResult.errors} erreur(s).
+              {importResult.errorLines.length > 0 && (
+                <ul className="mt-1 list-inside list-disc text-xs">
+                  {importResult.errorLines.slice(0, 5).map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {loadingOk() && null}
+        </form>
+      </Modal>
+    </div>
+  )
+}

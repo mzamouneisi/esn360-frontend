@@ -1,0 +1,422 @@
+export type Role = 'ADMIN' | 'RESPONSIBLE_ESN' | 'MANAGER' | 'CONSULTANT'
+
+export type CraStatus = 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED'
+
+export type DayType =
+  | 'WORKED'
+  | 'WEEKEND'
+  | 'PUBLIC_HOLIDAY'
+  | 'LEAVE'
+  | 'SICK_LEAVE'
+  | 'OTHER'
+
+export type NoteFraisStatus = 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED' | 'PAID'
+
+export type PaymentMethod = 'CARD' | 'TRANSFER' | 'CHECK' | 'OTHER'
+
+export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED'
+
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+
+export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+
+export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
+
+export interface PageResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+  totalPages: number
+}
+
+export interface UserDto {
+  id: number
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+  phone: string | null
+  role: Role
+  active: boolean
+  esnId: number | null
+  esnName: string | null
+  consultantId: number | null
+  mustChangePassword: boolean
+  lastLoginAt: string | null
+}
+
+export interface AuthResponse {
+  token: string
+  user: UserDto
+}
+
+export interface ResetResponse {
+  message: string
+  resetUrl: string
+}
+
+export interface ConnectionDto {
+  id: number
+  loginTime: string
+  ipAddress: string
+  userAgent: string
+  success: boolean
+  role: string | null
+}
+
+export interface Address {
+  street?: string | null
+  zipCode?: string | null
+  city?: string | null
+  country?: string | null
+}
+
+export interface EsnDto {
+  id: number
+  name: string
+  siret?: string | null
+  codeNaf?: string | null
+  urssaf?: string | null
+  website?: string | null
+  address?: Address | null
+}
+
+export interface SubscriptionDto {
+  id: number
+  plan: string
+  status: SubscriptionStatus
+  startDate: string
+  trialEndDate?: string | null
+  endDate?: string | null
+  monthlyPrice: number
+}
+
+export interface PaymentDto {
+  id: number
+  amount: number
+  paymentDate: string
+  method: PaymentMethod
+  reference?: string | null
+}
+
+export interface EsnDetailDto {
+  esn: EsnDto
+  subscriptions: SubscriptionDto[]
+  payments: PaymentDto[]
+}
+
+export interface ConsultantDto {
+  id: number
+  firstName: string
+  lastName: string
+  email: string | null
+  phone: string | null
+  position: string | null
+  hireDate: string | null
+  birthDate: string | null
+  socialNumber: string | null
+  baseSalary: number | null
+  currency: string | null
+  nationality: string | null
+  active: boolean
+  esnId: number
+  esnName: string
+  managerId: number | null
+  managerName: string | null
+  hasUserAccount: boolean
+  username: string | null
+}
+
+export interface ConsultantRequest {
+  firstName: string
+  lastName: string
+  email?: string | null
+  phone?: string | null
+  position?: string | null
+  hireDate?: string | null
+  birthDate?: string | null
+  socialNumber?: string | null
+  baseSalary?: number | null
+  currency?: string | null
+  nationality?: string | null
+  esnId: number
+  managerId?: number | null
+  username?: string | null
+  password?: string | null
+}
+
+export interface ConsultantSummary {
+  id: number
+  fullName: string
+  position: string
+  email: string
+}
+
+export interface ClientDto {
+  id: number
+  name: string
+  contactName: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  address: string | null
+  esn?: { id: number; name: string } | null
+  active: boolean
+}
+
+export interface ClientRequest {
+  name: string
+  contactName?: string | null
+  contactEmail?: string | null
+  contactPhone?: string | null
+  address?: string | null
+  esnId?: number | null
+  active: boolean
+}
+
+export interface ProjectDto {
+  id: number
+  name: string
+  description: string | null
+  client?: { id: number; name: string } | null
+  esn?: { id: number; name: string } | null
+  startDate: string | null
+  endDate: string | null
+  dailyRate: number | null
+  currency: string | null
+  active: boolean
+}
+
+export interface ProjectRequest {
+  name: string
+  description?: string | null
+  clientId: number
+  esnId: number
+  startDate?: string | null
+  endDate?: string | null
+  dailyRate?: number | null
+  currency?: string | null
+  active: boolean
+}
+
+export interface ActivityTypeDto {
+  id: number
+  code: string
+  labelFr: string
+  labelEn?: string | null
+  labelAr?: string | null
+  color?: string | null
+  active: boolean
+}
+
+export interface ActivityDto {
+  id: number
+  name: string
+  description: string | null
+  price: number
+  currency: string
+  type?: { id: number; code: string; labelFr: string; color?: string | null } | null
+  esn?: { id: number; name: string } | null
+  active: boolean
+}
+
+export interface ActivityRequest {
+  name: string
+  description?: string | null
+  price: number
+  currency?: string | null
+  typeId: number
+  esnId: number
+  active: boolean
+}
+
+export interface CraDayActivityDto {
+  id: number
+  activityId: number
+  activityName: string
+  activityColor: string | null
+  hours: number
+  comment: string | null
+}
+
+export interface CraDayDto {
+  id: number
+  date: string
+  dayType: DayType
+  workedHours: number
+  hours: number
+  comment: string | null
+  activities: CraDayActivityDto[]
+}
+
+export interface CraDto {
+  id: number
+  consultantId: number
+  consultantName: string | null
+  month: number
+  year: number
+  status: CraStatus
+  totalWorkedDays: number
+  totalHours: number
+  submittedAt: string | null
+  validatedAt: string | null
+  comment: string | null
+  days: CraDayDto[]
+}
+
+export interface CraDayActivityRequest {
+  activityId: number
+  hours: number
+  comment?: string | null
+}
+
+export interface CraDayRequest {
+  date: string
+  dayType: DayType
+  workedHours?: number | null
+  hours?: number | null
+  comment?: string | null
+  activities?: CraDayActivityRequest[]
+}
+
+export interface SaveCraRequest {
+  month: number
+  year: number
+  days: CraDayRequest[]
+}
+
+export interface NoteFraisLineDto {
+  id: number
+  date: string
+  category: string
+  label: string
+  amount: number
+  reimbursed: boolean
+  comment: string | null
+}
+
+export interface NoteFraisDto {
+  id: number
+  consultantId: number
+  consultantName: string
+  esnId: number
+  month: number
+  year: number
+  status: NoteFraisStatus
+  totalAmount: number
+  submittedAt: string | null
+  validatedAt: string | null
+  paidAt: string | null
+  comment: string | null
+  lines: NoteFraisLineDto[]
+}
+
+export interface NoteFraisLineRequest {
+  date: string
+  category: string
+  label: string
+  amount: number
+  reimbursed: boolean
+  comment?: string | null
+}
+
+export interface CreateNoteFraisRequest {
+  consultantId: number
+  month: number
+  year: number
+  lines: NoteFraisLineRequest[]
+}
+
+export interface HrDocumentDto {
+  id: number
+  name: string
+  category: string
+  contentType: string
+  size: number
+  expiresAt: string | null
+  description: string | null
+  consultantId: number | null
+  esnId: number | null
+  uploadedBy: string
+  createdAt: string
+}
+
+export interface FichePaieDto {
+  id: number
+  period: string
+  grossSalary: number
+  netSalary: number
+  employerCost: number | null
+  taxes: number | null
+  issuedAt: string | null
+  comment: string | null
+  consultant?: { id: number; firstName: string; lastName: string } | null
+}
+
+export interface MessageDto {
+  id: number
+  subject: string
+  body: string
+  read: boolean
+  deleted: boolean
+  createdAt: string
+  sender?: { id: number; firstName: string; lastName: string; username: string } | null
+  recipient?: { id: number; firstName: string; lastName: string; username: string } | null
+}
+
+export interface NotificationDto {
+  id: number
+  title: string
+  body: string | null
+  type: NotificationType
+  read: boolean
+  link: string | null
+  createdAt: string
+}
+
+export interface SupportTicketDto {
+  id: number
+  title: string
+  description: string
+  status: TicketStatus
+  priority: TicketPriority
+  category: string | null
+  createdAt: string
+  creator?: { id: number; firstName: string; lastName: string; username: string } | null
+  assignedTo?: { id: number; firstName: string; lastName: string; username: string } | null
+}
+
+export interface SupportExchangeDto {
+  id: number
+  body: string
+  createdAt: string
+  author?: { id: number; firstName: string; lastName: string; username: string } | null
+}
+
+export interface PublicHolidayDto {
+  id: number
+  country: string
+  date: string
+  label: string
+}
+
+export interface DashboardOverview {
+  user: string
+  role: Role
+  esnId: number | null
+  unreadMessages: number
+  unreadNotifications: number
+  totalUsers?: number
+  totalEsns?: number
+  totalConsultants?: number
+  activeSubscriptions?: number
+  consultants?: number
+  pendingCras?: number
+  pendingNoteFrais?: number
+  validatedCrasThisMonth?: number
+  craStatus?: CraStatus
+  craTotalHours?: number
+  craTotalDays?: number
+  noteFraisStatus?: NoteFraisStatus
+  noteFraisTotal?: number
+}

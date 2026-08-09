@@ -1,0 +1,92 @@
+import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { authApi } from '../api/auth'
+import { ApiError } from '../api/client'
+import { Alert, Button, Card, Field, Input, Spinner } from '../components/ui'
+
+export function ForgotPassword() {
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [resetUrl, setResetUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setMessage(null)
+    setSubmitting(true)
+    try {
+      const response = await authApi.forgotPassword(email)
+      setMessage(response.message)
+      setResetUrl(response.resetUrl)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 p-6">
+      <Card className="w-full max-w-sm p-8">
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Mot de passe oublié</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Entrez votre adresse e-mail pour réinitialiser votre mot de passe
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4">
+            <Alert>{error}</Alert>
+          </div>
+        )}
+
+        {message && (
+          <div className="mb-4 space-y-2">
+            <Alert variant="success">{message}</Alert>
+            {resetUrl && (
+              <Alert variant="info">
+                Lien de réinitialisation :{' '}
+                <a
+                  href={resetUrl}
+                  className="font-medium text-brand-700 underline"
+                >
+                  {resetUrl}
+                </a>
+              </Alert>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Adresse e-mail">
+            <Input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="marie.durand@exemple.fr"
+            />
+          </Field>
+
+          <Button type="submit" disabled={submitting}>
+            {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+            Envoyer le lien
+          </Button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-gray-600">
+          <Link
+            to="/login"
+            className="font-medium text-brand-600 hover:text-brand-700"
+          >
+            ← Retour à la connexion
+          </Link>
+        </p>
+      </Card>
+    </div>
+  )
+}

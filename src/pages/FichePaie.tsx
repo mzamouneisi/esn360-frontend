@@ -1,0 +1,321 @@
+import { useRef, useState, type FormEvent } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { fichePaieApi } from '../api/fichePaie'
+import { consultantsApi } from '../api/consultants'
+import { ApiError } from '../api/client'
+import { useAsync } from '../lib/useAsync'
+import { Button, Card, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
+import { formatDate, formatMoney } from '../lib/format'
+import type { FichePaieDto } from '../api/types'
+
+interface FormState {
+  consultantId: string
+  period: string
+  grossSalary: string
+  netSalary: string
+  employerCost: string
+  taxes: string
+  issuedAt: string
+  comment: string
+}
+
+const emptyForm: FormState = {
+  consultantId: '',
+  period: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+  grossSalary: '',
+  netSalary: '',
+  employerCost: '',
+  taxes: '',
+  issuedAt: '',
+  comment: '',
+}
+
+export function FichePaie() {
+  const { user } = useAuth()
+  const isConsultant = user?.role === 'CONSULTANT'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN'
+
+  const { data, loading, error, reload, setData } = useAsync(
+    () =>
+      isConsultant && user?.consultantId
+        ? fichePaieApi.findByConsultant(user.consultantId)
+        : user?.esnId
+          ? fichePaieApi.findByEsn(user.esnId)
+          : Promise.resolve([] as FichePaieDto[]),
+    [user?.esnId, user?.consultantId, isConsultant],
+  )
+
+  const { data: summaries } = useAsync(
+    () => (user?.esnId ? consultantsApi.summaries(user.esnId) : Promise.resolve([])),
+    [user?.esnId],
+  )
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [uploadingId, setUploadingId] = useState<number | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  if (!user) return null
+
+  function openCreate() {
+    setForm(emptyForm)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault()
+    if (!form.consultantId) {
+      setFormError('Sélectionnez un consultant')
+      return
+    }
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      await fichePaieApi.create({
+        consultantId: Number(form.consultantId),
+        period: form.period,
+        grossSalary: Number(form.grossSalary) || 0,
+        netSalary: Number(form.netSalary) || 0,
+        employerCost: form.employerCost ? Number(form.employerCost) : null,
+        taxes: form.taxes ? Number(form.taxes) : null,
+        issuedAt: form.issuedAt || null,
+        comment: form.comment || null,
+      })
+      setModalOpen(false)
+      reload()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleUpload(fp: FichePaieDto) {
+    const input = fileRef.current
+    if (!input || !input.files?.[0]) {
+      window.alert('Sélectionnez un fichier PDF à associer')
+      return
+    }
+    setUploadingId(fp.id)
+    try {
+      await fichePaieApi.uploadFile(fp.id, input.files[0])
+      reload()
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setUploadingId(null)
+      input.value = ''
+    }
+  }
+
+  async function handleDelete(fp: FichePaieDto) {
+    if (!window.confirm(`Supprimer la fiche de paie de ${fp.period} ?`)) return
+    try {
+      await fichePaieApi.delete(fp.id)
+      setData((prev) => (prev ?? []).filter((x) => x.id !== fp.id))
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  const totalNet = (data ?? []).reduce((sum, fp) => sum + fp.netSalary, 0)
+
+  return (
+    <div>
+      <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="hidden" />
+
+      <PageHeader
+        title="Fiches de paie"
+        subtitle="Bulletins de salaire par consultant et par période"
+        actions={
+          canEdit ? (
+            <Button className="w-auto" onClick={openCreate}>
+              + Nouvelle fiche
+            </Button>
+          ) : undefined
+        }
+      />
+
+      <Card className="mb-6 p-5">
+        <p className="text-sm font-medium text-gray-500">Total net {new Date().getFullYear()}</p>
+        <p className="mt-2 text-2xl font-bold text-gray-900">{formatMoney(totalNet)}</p>
+      </Card>
+
+      {error && <ErrorBlock message={error} />}
+      {loading && <LoadingBlock />}
+
+      {!loading && data && data.length > 0 && (
+        <Table
+          rowKey={(fp) => fp.id}
+          rows={data}
+          columns={[
+            {
+              key: 'consultant',
+              label: 'Consultant',
+              render: (fp) => (
+                <span className="font-medium text-gray-900">
+                  {fp.consultant
+                    ? `${fp.consultant.firstName} ${fp.consultant.lastName}`
+                    : '—'}
+                </span>
+              ),
+            },
+            {
+              key: 'period',
+              label: 'Période',
+              render: (fp) => <span className="text-gray-700">{fp.period}</span>,
+            },
+            {
+              key: 'gross',
+              label: 'Brut',
+              render: (fp) => <span>{formatMoney(fp.grossSalary)}</span>,
+            },
+            {
+              key: 'net',
+              label: 'Net',
+              render: (fp) => <span className="font-semibold text-gray-900">{formatMoney(fp.netSalary)}</span>,
+            },
+            {
+              key: 'cost',
+              label: 'Coût employeur',
+              render: (fp) => <span>{fp.employerCost != null ? formatMoney(fp.employerCost) : '—'}</span>,
+            },
+            {
+              key: 'issued',
+              label: 'Émise le',
+              render: (fp) => <span className="text-gray-500">{formatDate(fp.issuedAt)}</span>,
+            },
+            {
+              key: 'actions',
+              label: '',
+              render: (fp) => (
+                <div className="flex justify-end gap-1">
+                  <InlineButton onClick={() => fichePaieApi.download(fp.id, fp.period).catch((err) => window.alert(err.message))}>
+                    PDF
+                  </InlineButton>
+                  {canEdit && (
+                    <>
+                      <InlineButton
+                        disabled={uploadingId === fp.id}
+                        onClick={() => handleUpload(fp)}
+                      >
+                        {uploadingId === fp.id ? <Spinner /> : 'Associer'}
+                      </InlineButton>
+                      <InlineButton
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(fp)}
+                      >
+                        Supprimer
+                      </InlineButton>
+                    </>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
+      )}
+
+      {!loading && data && data.length === 0 && (
+        <EmptyState
+          title="Aucune fiche de paie"
+          description={canEdit ? 'Ajoutez la première fiche de paie.' : 'Aucune fiche disponible.'}
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Nouvelle fiche de paie"
+        footer={
+          <>
+            <InlineButton onClick={() => setModalOpen(false)}>Annuler</InlineButton>
+            <Button className="w-auto" onClick={handleCreate as never} disabled={submitting}>
+              {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+              Créer
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {formError}
+            </div>
+          )}
+          <Field label="Consultant *">
+            <Select
+              value={form.consultantId}
+              onChange={(e) => setForm({ ...form, consultantId: e.target.value })}
+            >
+              <option value="">Sélectionner…</option>
+              {(summaries ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.fullName}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Période (AAAA-MM)">
+              <Input
+                value={form.period}
+                onChange={(e) => setForm({ ...form, period: e.target.value })}
+                placeholder="2025-06"
+              />
+            </Field>
+            <Field label="Date d'émission">
+              <Input type="date" value={form.issuedAt} onChange={(e) => setForm({ ...form, issuedAt: e.target.value })} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Salaire brut">
+              <Input
+                type="number"
+                step="0.01"
+                value={form.grossSalary}
+                onChange={(e) => setForm({ ...form, grossSalary: e.target.value })}
+              />
+            </Field>
+            <Field label="Salaire net">
+              <Input
+                type="number"
+                step="0.01"
+                value={form.netSalary}
+                onChange={(e) => setForm({ ...form, netSalary: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Coût employeur">
+              <Input
+                type="number"
+                step="0.01"
+                value={form.employerCost}
+                onChange={(e) => setForm({ ...form, employerCost: e.target.value })}
+              />
+            </Field>
+            <Field label="Charges / impôts">
+              <Input
+                type="number"
+                step="0.01"
+                value={form.taxes}
+                onChange={(e) => setForm({ ...form, taxes: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Field label="Commentaire">
+            <Input
+              value={form.comment}
+              onChange={(e) => setForm({ ...form, comment: e.target.value })}
+            />
+          </Field>
+        </form>
+      </Modal>
+    </div>
+  )
+}
