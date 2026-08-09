@@ -1,5 +1,7 @@
 import { clearToken, getToken } from '../auth/token'
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
+
 export class ApiError extends Error {
   readonly status: number
   readonly details?: Record<string, string>
@@ -57,7 +59,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   let response: Response
   try {
-    response = await fetch(`/api${path}`, { ...options, headers })
+    response = await fetch(`${API_BASE_URL}/api${path}`, { ...options, headers })
   } catch {
     throw new ApiError(0, 'Impossible de joindre le serveur')
   }
@@ -82,7 +84,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 async function upload<T>(path: string, formData: FormData): Promise<T> {
   let response: Response
   try {
-    response = await fetch(`/api${path}`, {
+    response = await fetch(`${API_BASE_URL}/api${path}`, {
       method: 'POST',
       headers: authHeaders(),
       body: formData,
@@ -105,7 +107,7 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
 }
 
 async function download(path: string, fallbackName: string): Promise<void> {
-  const response = await fetch(`/api${path}`, { headers: authHeaders() })
+  const response = await fetch(`${API_BASE_URL}/api${path}`, { headers: authHeaders() })
   if (!response.ok) {
     throw await parseError(response)
   }
