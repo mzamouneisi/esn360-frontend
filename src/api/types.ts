@@ -35,6 +35,19 @@ export interface EsnLiteDto {
   name: string
 }
 
+export interface AddEsnPayload {
+  esnName: string
+  description?: string | null
+  siret?: string | null
+  codeNaf?: string | null
+  urssaf?: string | null
+  website?: string | null
+  street?: string | null
+  zipCode?: string | null
+  city?: string | null
+  country?: string | null
+}
+
 export interface UserDto {
   id: number
   username: string
@@ -84,6 +97,7 @@ export interface Address {
 export interface EsnDto {
   id: number
   name: string
+  description?: string | null
   siret?: string | null
   codeNaf?: string | null
   urssaf?: string | null

@@ -1,36 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useEsn } from './EsnContext'
-import { Button, Input } from '../components/ui'
+import { Button, Field, Input, Textarea } from '../components/ui'
+import { Modal } from '../components/data'
 
 export function EsnSelector() {
-  const { esns, selectedEsn, selectEsn, addEsn, canAddEsn, loading } = useEsn()
+  const { esns, selectedEsn, selectEsn, canAddEsn, loading } = useEsn()
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [siret, setSiret] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-
-  async function handleAdd(e: FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) {
-      setError("Le nom de l'ESN est obligatoire")
-      return
-    }
-    setSaving(true)
-    setError(null)
-    try {
-      await addEsn({ esnName: name.trim(), siret: siret.trim() || undefined })
-      setName('')
-      setSiret('')
-      setAdding(false)
-      setOpen(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'inscription de l'ESN")
-    } finally {
-      setSaving(false)
-    }
-  }
 
   return (
     <div className="relative">
@@ -98,51 +74,167 @@ export function EsnSelector() {
 
             {canAddEsn && (
               <div className="mt-2 border-t border-gray-100 pt-2">
-                {adding ? (
-                  <form onSubmit={handleAdd} className="space-y-2 px-1">
-                    <Input
-                      placeholder="Nom de l'ESN"
-                      value={name}
-                      onChange={(ev) => setName(ev.target.value)}
-                      autoFocus
-                    />
-                    <Input
-                      placeholder="SIRET (optionnel)"
-                      value={siret}
-                      onChange={(ev) => setSiret(ev.target.value)}
-                    />
-                    {error && <p className="text-xs text-red-600">{error}</p>}
-                    <div className="flex gap-2">
-                      <Button type="submit" disabled={saving} className="!py-1.5 text-xs">
-                        {saving ? 'Enregistrement…' : 'Inscrire'}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setAdding(false)
-                          setError(null)
-                        }}
-                        className="!bg-gray-100 !py-1.5 text-xs !text-gray-700 hover:!bg-gray-200"
-                      >
-                        Annuler
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAdding(true)}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-brand-600 transition hover:bg-brand-50"
-                  >
-                    <span className="text-base leading-none">＋</span>
-                    Inscrire une ESN
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    setAdding(true)
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-brand-600 transition hover:bg-brand-50"
+                >
+                  <span className="text-base leading-none">＋</span>
+                  Inscrire une ESN
+                </button>
               </div>
             )}
           </div>
         </>
       )}
+
+      {canAddEsn && <AddEsnModal open={adding} onClose={() => setAdding(false)} />}
     </div>
+  )
+}
+
+function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { addEsn } = useEsn()
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [siret, setSiret] = useState('')
+  const [codeNaf, setCodeNaf] = useState('')
+  const [urssaf, setUrssaf] = useState('')
+  const [website, setWebsite] = useState('')
+  const [street, setStreet] = useState('')
+  const [zipCode, setZipCode] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  function reset() {
+    setName('')
+    setDescription('')
+    setSiret('')
+    setCodeNaf('')
+    setUrssaf('')
+    setWebsite('')
+    setStreet('')
+    setZipCode('')
+    setCity('')
+    setCountry('')
+    setError(null)
+  }
+
+  function close() {
+    reset()
+    onClose()
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) {
+      setError("Le nom de l'ESN est obligatoire")
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      await addEsn({
+        esnName: name.trim(),
+        description: description.trim() || undefined,
+        siret: siret.trim() || undefined,
+        codeNaf: codeNaf.trim() || undefined,
+        urssaf: urssaf.trim() || undefined,
+        website: website.trim() || undefined,
+        street: street.trim() || undefined,
+        zipCode: zipCode.trim() || undefined,
+        city: city.trim() || undefined,
+        country: country.trim() || undefined,
+      })
+      close()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'inscription de l'ESN")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title="Inscrire une nouvelle ESN"
+      onClose={close}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" onClick={close} className="!w-auto !bg-gray-100 !text-gray-700 hover:!bg-gray-200">
+            Annuler
+          </Button>
+          <Button type="submit" form="add-esn-form" disabled={saving} className="!w-auto">
+            {saving ? 'Enregistrement…' : "Inscrire l'ESN"}
+          </Button>
+        </>
+      }
+    >
+      <form id="add-esn-form" onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <Field label="Nom de la société *">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex : XYZ Consulting" autoFocus />
+        </Field>
+
+        <Field label="Description">
+          <Textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Activité, présentation de la société…"
+          />
+        </Field>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="SIRET">
+            <Input value={siret} onChange={(e) => setSiret(e.target.value)} placeholder="14 chiffres" />
+          </Field>
+          <Field label="Code NAF">
+            <Input value={codeNaf} onChange={(e) => setCodeNaf(e.target.value)} placeholder="Ex : 6202A" />
+          </Field>
+          <Field label="URSSAF">
+            <Input value={urssaf} onChange={(e) => setUrssaf(e.target.value)} />
+          </Field>
+        </div>
+
+        <Field label="Site web">
+          <Input
+            type="url"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://…"
+          />
+        </Field>
+
+        <fieldset className="space-y-4 rounded-lg border border-gray-200 p-4">
+          <legend className="px-1 text-sm font-medium text-gray-700">Adresse</legend>
+          <Field label="Rue">
+            <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="N° et rue" />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="Code postal">
+              <Input value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
+            </Field>
+            <Field label="Ville">
+              <Input value={city} onChange={(e) => setCity(e.target.value)} />
+            </Field>
+            <Field label="Pays">
+              <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="FR" />
+            </Field>
+          </div>
+        </fieldset>
+      </form>
+    </Modal>
   )
 }

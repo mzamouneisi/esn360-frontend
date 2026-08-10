@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { useEsn } from '../esn/EsnContext'
 import { authApi } from '../api/auth'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
@@ -9,6 +10,7 @@ import { ROLE_LABELS, formatDateTime } from '../lib/format'
 
 export function Profile() {
   const { user, refreshMe } = useAuth()
+  const { esns } = useEsn()
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -83,8 +85,21 @@ export function Profile() {
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-500">Société</dt>
-              <dd className="text-sm font-medium text-gray-900">{user.esnName ?? '—'}</dd>
+              <dt className="text-sm text-gray-500">Sociétés</dt>
+              <dd className="text-sm font-medium text-gray-900">
+                {esns.length > 0 ? (
+                  <ul className="space-y-1">
+                    {esns.map((e) => (
+                      <li key={e.id} className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                        {e.name}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  user.esnName ?? '—'
+                )}
+              </dd>
             </div>
           </dl>
         </Card>

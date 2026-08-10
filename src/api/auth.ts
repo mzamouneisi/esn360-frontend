@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  AddEsnPayload,
   AuthResponse,
   ConnectionDto,
   EmailSentResponse,
@@ -39,7 +40,7 @@ export const authApi = {
     api.post<void>('/auth/change-password', { currentPassword, newPassword }),
   me: () => api.get<UserDto>('/auth/me'),
   myEsns: () => api.get<EsnLiteDto[]>('/auth/me/esns'),
-  addEsn: (payload: { esnName: string; siret?: string }) =>
+  addEsn: (payload: AddEsnPayload) =>
     api.post<EsnLiteDto>('/auth/me/esns', payload),
   connections: () => api.get<ConnectionDto[]>('/auth/connections'),
 }

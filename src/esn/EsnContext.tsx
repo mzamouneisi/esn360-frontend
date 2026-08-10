@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { authApi } from '../api/auth'
 import { getCurrentEsnId, setCurrentEsnId } from '../api/client'
-import type { EsnLiteDto } from '../api/types'
+import type { AddEsnPayload, EsnLiteDto } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 
 interface EsnState {
@@ -19,7 +19,7 @@ interface EsnState {
   loading: boolean
   refreshEsns: () => Promise<void>
   selectEsn: (id: number) => void
-  addEsn: (payload: { esnName: string; siret?: string }) => Promise<EsnLiteDto>
+  addEsn: (payload: AddEsnPayload) => Promise<EsnLiteDto>
   canAddEsn: boolean
 }
 
@@ -87,7 +87,7 @@ export function EsnProvider({ children }: { children: ReactNode }) {
   )
 
   const addEsn = useCallback(
-    async (payload: { esnName: string; siret?: string }) => {
+    async (payload: AddEsnPayload) => {
       const created = await authApi.addEsn(payload)
       const list = await authApi.myEsns()
       setEsns(list)
