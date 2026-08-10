@@ -20,9 +20,22 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler
 }
 
+let currentEsnId: number | null = null
+
+export function setCurrentEsnId(id: number | null): void {
+  currentEsnId = id
+}
+
+export function getCurrentEsnId(): number | null {
+  return currentEsnId
+}
+
 function authHeaders(): Record<string, string> {
   const token = getToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (currentEsnId != null) headers['X-ESN-Id'] = String(currentEsnId)
+  return headers
 }
 
 function buildQuery(params?: Record<string, string | number | boolean | null | undefined>): string {

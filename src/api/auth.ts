@@ -1,5 +1,12 @@
 import { api } from './client'
-import type { AuthResponse, ConnectionDto, ResetResponse, UserDto } from './types'
+import type {
+  AuthResponse,
+  ConnectionDto,
+  EmailSentResponse,
+  EsnLiteDto,
+  ResetResponse,
+  UserDto,
+} from './types'
 
 export interface LoginPayload {
   username: string
@@ -19,7 +26,11 @@ export interface RegisterEsnPayload {
 export const authApi = {
   login: (payload: LoginPayload) => api.post<AuthResponse>('/auth/login', payload),
   registerEsn: (payload: RegisterEsnPayload) =>
-    api.post<AuthResponse>('/auth/register-esn', payload),
+    api.post<EmailSentResponse>('/auth/register-esn', payload),
+  verifyEmail: (token: string) =>
+    api.post<AuthResponse>('/auth/verify-email', { token }),
+  resendVerification: (email: string) =>
+    api.post<EmailSentResponse>('/auth/resend-verification', { email }),
   forgotPassword: (email: string) =>
     api.post<ResetResponse>('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) =>
@@ -27,5 +38,8 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<void>('/auth/change-password', { currentPassword, newPassword }),
   me: () => api.get<UserDto>('/auth/me'),
+  myEsns: () => api.get<EsnLiteDto[]>('/auth/me/esns'),
+  addEsn: (payload: { esnName: string; siret?: string }) =>
+    api.post<EsnLiteDto>('/auth/me/esns', payload),
   connections: () => api.get<ConnectionDto[]>('/auth/connections'),
 }

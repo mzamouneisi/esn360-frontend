@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { AuthProvider } from './auth/AuthContext'
+import { EsnProvider } from './esn/EsnContext'
 
 const redirect = sessionStorage.getItem('esn360.redirect')
 if (redirect) {
@@ -13,7 +14,9 @@ if (redirect) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <EsnProvider>
+        <App />
+      </EsnProvider>
     </AuthProvider>
   </StrictMode>,
 )

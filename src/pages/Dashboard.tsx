@@ -1,4 +1,5 @@
 import { useAuth } from '../auth/AuthContext'
+import { useEsn } from '../esn/EsnContext'
 import { Card } from '../components/ui'
 import { Badge, LoadingBlock, ErrorBlock } from '../components/data'
 import { dashboardApi } from '../api/dashboard'
@@ -15,11 +16,14 @@ import { Link } from 'react-router-dom'
 
 export function Dashboard() {
   const { user } = useAuth()
-  const { data, loading, error } = useAsync(() => dashboardApi.overview(), [], {
+  const { selectedEsn, selectedEsnId } = useEsn()
+  const { data, loading, error } = useAsync(() => dashboardApi.overview(), [selectedEsnId], {
     enabled: !!user,
   })
 
   if (!user) return null
+
+  const activeEsnName = selectedEsn?.name ?? user.esnName
 
   const now = new Date()
   const month = now.getMonth() + 1
@@ -33,7 +37,7 @@ export function Dashboard() {
         </h2>
         <p className="mt-1 text-sm text-gray-500">
           Voici un aperçu de votre activité
-          {user.esnName ? ` chez ${user.esnName}` : ''} · {monthLabel(month)} {year}.
+          {activeEsnName ? ` chez ${activeEsnName}` : ''} · {monthLabel(month)} {year}.
         </p>
       </div>
 
@@ -144,7 +148,7 @@ export function Dashboard() {
           <InfoRow label="Nom" value={`${user.firstName} ${user.lastName}`} />
           <InfoRow label="E-mail" value={user.email} />
           <InfoRow label="Rôle" value={ROLE_LABELS[user.role]} />
-          <InfoRow label="ESN" value={user.esnName ?? '—'} />
+          <InfoRow label="ESN" value={activeEsnName ?? '—'} />
           <InfoRow label="Téléphone" value={user.phone ?? '—'} />
           <InfoRow label="Identifiant" value={user.username} />
         </dl>

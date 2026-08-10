@@ -30,6 +30,11 @@ export interface PageResponse<T> {
   totalPages: number
 }
 
+export interface EsnLiteDto {
+  id: number
+  name: string
+}
+
 export interface UserDto {
   id: number
   username: string
@@ -54,6 +59,10 @@ export interface AuthResponse {
 export interface ResetResponse {
   message: string
   resetUrl: string
+}
+
+export interface EmailSentResponse {
+  message: string
 }
 
 export interface ConnectionDto {

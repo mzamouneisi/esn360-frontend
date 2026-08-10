@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { NotificationBell } from './NotificationBell'
+import { EsnSelector } from '../esn/EsnSelector'
 import { ROLE_LABELS, initials } from '../lib/format'
 
 interface NavItem {
@@ -179,7 +180,7 @@ export function MainLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6">
           <div>
-            <p className="text-sm text-gray-500">{user.esnName ?? 'Espace de travail'}</p>
+            <EsnSelector />
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
