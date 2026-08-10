@@ -1,13 +1,43 @@
 #!/bin/bash
 
 # Deploiement du frontend esn360-frontend sur GitHub Pages (branche main, dossier docs/).
+# Deux sites distincts (dev et prod) pour appeler chacun leur backend Azure.
+#
 # Usage (depuis la racine du projet) :
-#   ./deploy_front_to_gh_pages.sh
+#   ./deploy_front_to_gh_pages.sh            # site DEV (defaut)
+#   ./deploy_front_to_gh_pages.sh dev        # site DEV
+#   ./deploy_front_to_gh_pages.sh prod       # site PROD (deploie vers esn360-frontend-prod)
+#
+# Pour le site PROD, definir PROD_PAGES_REPO si le depot du site prod n'est pas
+# esn360-frontend-prod : PROD_PAGES_REPO=git@github.com:USER/REPO.git ./deploy_front_to_gh_pages.sh prod
 
 set -euo pipefail
 
-BRANCH_REQUIRED="main"
-PAGES_URL="https://mzamouneisi.github.io/esn360-frontend/"
+TARGET="${1:-dev}"
+
+case "$TARGET" in
+  dev)
+    BRANCH_REQUIRED="main"
+    VITE_MODE="production"
+    OUT_DIR="docs"
+    PAGES_URL="https://mzamouneisi.github.io/esn360-frontend/"
+    BASE_EXPECTED="/esn360-frontend/"
+    ENV_FILE=".env.production"
+    ;;
+  prod)
+    BRANCH_REQUIRED="main"
+    VITE_MODE="production-prod"
+    OUT_DIR="dist-prod"
+    PAGES_URL="https://mzamouneisi.github.io/esn360-frontend-prod/"
+    BASE_EXPECTED="/esn360-frontend-prod/"
+    ENV_FILE=".env.production-prod"
+    PROD_PAGES_REPO="${PROD_PAGES_REPO:-git@github.com:mzamouneisi/esn360-frontend-prod.git}"
+    ;;
+  *)
+    log "ERROR: Cible inconnue '$TARGET' (valeurs possibles : dev, prod)."
+    exit 1
+    ;;
+esac
 
 SCRIPT_NAME="$(basename "$0")"
 LOG_FILE="${SCRIPT_NAME%.sh}.log"
@@ -18,6 +48,11 @@ log() {
 
 if [ ! -f "package.json" ]; then
   log "ERROR: package.json introuvable. Lancez ce script depuis la racine du projet esn360-frontend."
+  exit 1
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
+  log "ERROR: Fichier '$ENV_FILE' introuvable. Creez-le (voir DOC_DEPLOY_FRONT_TO_GH_PAGES.md)."
   exit 1
 fi
 
@@ -34,7 +69,7 @@ for cmd in git npm; do
   fi
 done
 
-log "=== Deploiement GitHub Pages (branche '$BRANCH_NAME', dossier docs/) ==="
+log "=== Deploiement GitHub Pages '$TARGET' (branche '$BRANCH_NAME', dossier '$OUT_DIR/') ==="
 log "URL publique : $PAGES_URL"
 
 log "Lint..."
@@ -43,29 +78,56 @@ npm run lint
 log "Tests..."
 npm test
 
-log "Build vers docs/ (base et URL API lues dans .env.production)..."
-npm run build:pages
-
-if [ ! -f "docs/index.html" ]; then
-  log "ERROR: Build invalide : docs/index.html absent."
-  exit 1
-fi
-
-BASE_OK="$(grep -o 'src="[^"]*"\|href="[^"]*"' docs/index.html | grep -c '/esn360-frontend/' || true)"
-if [ "$BASE_OK" -lt 1 ]; then
-  log "ERROR: Le build n'utilise pas la base '/esn360-frontend/'. Verifier .env.production."
-  exit 1
-fi
-
-log "Envoi du dossier docs/ vers git..."
-git add docs/
-if git diff --cached --quiet; then
-  log "Aucun changement dans docs/ : rien a pousser."
+log "Build vers '$OUT_DIR/' (base et URL API lues dans $ENV_FILE, mode $VITE_MODE)..."
+if [ "$TARGET" = "prod" ]; then
+  npm run build:pages:prod
 else
-  git commit -m "GitHub Pages : build docs/ ($(date +'%Y-%m-%d %H:%M:%S'))"
-  git push origin "$BRANCH_NAME"
-  log "Push effectue."
+  npm run build:pages
 fi
 
-log "Termine. Le site est en ligne quelques instants plus tard :"
+if [ ! -f "$OUT_DIR/index.html" ]; then
+  log "ERROR: Build invalide : $OUT_DIR/index.html absent."
+  exit 1
+fi
+
+BASE_OK="$(grep -o 'src="[^"]*"\|href="[^"]*"' "$OUT_DIR/index.html" | grep -c "$BASE_EXPECTED" || true)"
+if [ "$BASE_OK" -lt 1 ]; then
+  log "ERROR: Le build n'utilise pas la base '$BASE_EXPECTED'. Verifier $ENV_FILE."
+  exit 1
+fi
+
+if [ "$TARGET" = "prod" ]; then
+  log "Copie de '$OUT_DIR/' vers le depot du site prod ($PROD_PAGES_REPO)..."
+  TMP_DIR="$(mktemp -d)"
+  git clone --quiet --depth 1 "$PROD_PAGES_REPO" "$TMP_DIR/pages-prod" || {
+    log "ERROR: Clonage impossible de '$PROD_PAGES_REPO' (verifiez l'URL et les droits)."
+    exit 1
+  }
+  rm -rf "$TMP_DIR/pages-prod/docs"
+  cp -r "$OUT_DIR" "$TMP_DIR/pages-prod/docs"
+  (
+    cd "$TMP_DIR/pages-prod"
+    git add docs/
+    if git diff --cached --quiet; then
+      log "Aucun changement dans docs/ : rien a pousser."
+    else
+      git commit -m "GitHub Pages prod : build docs/ ($(date +'%Y-%m-%d %H:%M:%S'))"
+      git push origin "$BRANCH_REQUIRED"
+      log "Push effectue."
+    fi
+  )
+  rm -rf "$TMP_DIR"
+else
+  log "Envoi du dossier docs/ vers git..."
+  git add docs/
+  if git diff --cached --quiet; then
+    log "Aucun changement dans docs/ : rien a pousser."
+  else
+    git commit -m "GitHub Pages : build docs/ ($(date +'%Y-%m-%d %H:%M:%S'))"
+    git push origin "$BRANCH_NAME"
+    log "Push effectue."
+  fi
+fi
+
+log "Termine. Le site '$TARGET' est en ligne quelques instants plus tard :"
 log "  $PAGES_URL"

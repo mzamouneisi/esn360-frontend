@@ -1,15 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { authApi } from '../api/auth'
 import { ApiError } from '../api/client'
-import { useAuth } from '../auth/AuthContext'
-import { setToken } from '../auth/token'
 import { Alert, Button, Card, Field, Input, Spinner } from '../components/ui'
 
 export function Register() {
-  const { setUser } = useAuth()
-  const navigate = useNavigate()
-
   const [esnName, setEsnName] = useState('')
   const [siret, setSiret] = useState('')
   const [adminFirstName, setAdminFirstName] = useState('')
@@ -19,11 +14,13 @@ export function Register() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setMessage(null)
 
     if (password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas')
@@ -41,14 +38,43 @@ export function Register() {
         email,
         password,
       })
-      setToken(response.token)
-      setUser(response.user)
-      navigate('/', { replace: true })
+      setMessage(response.message)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erreur inattendue')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (message) {
+    return (
+      <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 p-6">
+        <Card className="w-full max-w-lg p-8">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-extrabold text-white">
+              E
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Vérifiez votre boîte mail</h1>
+            <p className="mt-1 text-sm text-gray-500">{message}</p>
+          </div>
+
+          <Alert variant="success">
+            Cliquez sur le lien reçu pour valider votre inscription et activer votre compte.
+            Ce lien expire au bout de 2 heures.
+          </Alert>
+
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Déjà validé ?{' '}
+            <Link
+              to="/login"
+              className="font-medium text-brand-600 hover:text-brand-700"
+            >
+              Se connecter
+            </Link>
+          </p>
+        </Card>
+      </div>
+    )
   }
 
   return (

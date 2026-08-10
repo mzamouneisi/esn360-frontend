@@ -7,6 +7,7 @@ import { MainLayout } from './layout/MainLayout'
 import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { VerifyEmail } from './pages/VerifyEmail'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
 import { ChangePassword } from './pages/ChangePassword'
@@ -37,6 +38,7 @@ const router = createBrowserRouter(
       children: [
         { path: '/login', element: <Login /> },
         { path: '/inscription', element: <Register /> },
+        { path: '/auth/verify-email', element: <VerifyEmail /> },
         { path: '/forgot-password', element: <ForgotPassword /> },
         { path: '/reset-password/:token', element: <ResetPassword /> },
       ],
