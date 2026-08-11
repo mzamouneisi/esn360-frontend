@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'esn360_token'
+const TOKEN_KEY = 'soc360_token'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)

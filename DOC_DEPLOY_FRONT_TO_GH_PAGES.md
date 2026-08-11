@@ -1,6 +1,6 @@
 # DOC_DEPLOY_FRONT_TO_GH_PAGES
 
-Guide de déploiement du frontend **esn360-frontend** (React + Vite) sur **GitHub Pages** : branche `main`, dossier `docs/`. Le site appelle le backend déployé sur Azure Container Apps.
+Guide de déploiement du frontend **soc360-front-react** (React + Vite) sur **GitHub Pages** : branche `main`, dossier `docs/`. Le site appelle le backend déployé sur Azure Container Apps.
 
 **Deux sites GitHub Pages distincts** (dev et prod) : chacun appelle son propre backend Azure. Le build est paramétré par un mode Vite + un fichier `.env` dédié.
 
@@ -21,16 +21,16 @@ Deux sites cibles :
 
 | Cible | Dépôt GitHub | URL publique | Backend appelé |
 |---|---|---|---|
-| **dev** | `mzamouneisi/esn360-frontend` | `https://mzamouneisi.github.io/esn360-frontend/` | `esn360-backend-v2-dev` (Azure Container Apps) |
-| **prod** | `mzamouneisi/esn360-frontend-prod` | `https://mzamouneisi.github.io/esn360-frontend-prod/` | `esn360-backend-v2-prod` (Azure Container Apps) |
+| **dev** | `mzamouneisi/soc360-front-react` | `https://mzamouneisi.github.io/soc360-front-react/` | `esn360-backend-v2-dev` (Azure Container Apps) |
+| **prod** | `mzamouneisi/soc360-front-react-prod` | `https://mzamouneisi.github.io/soc360-front-react-prod/` | `esn360-backend-v2-prod` (Azure Container Apps) |
 
 Chaque dépôt sert le contenu de son dossier `docs/` de la branche `main` (GitHub Pages).
 
 ## 2. Prérequis
 
 - Node.js ≥ 20.19 (22.12+ recommandé) + npm
-- Repo GitHub `mzamouneisi/esn360-frontend` avec les droits de push (site dev)
-- Repo GitHub `mzamouneisi/esn360-frontend-prod` à créer (site prod) avec les droits de push
+- Repo GitHub `mzamouneisi/soc360-front-react` avec les droits de push (site dev)
+- Repo GitHub `mzamouneisi/soc360-front-react-prod` à créer (site prod) avec les droits de push
 - GitHub Pages activé une fois sur chaque repo (voir section 5)
 
 ## 3. Variables de build
@@ -39,29 +39,29 @@ Chaque dépôt sert le contenu de son dossier `docs/` de la branche `main` (GitH
 
 | Variable | Valeur | Rôle |
 |---|---|---|
-| `VITE_BASE_PATH` | `/esn360-frontend/` | Base de Vite (chemins des assets et routeur) |
+| `VITE_BASE_PATH` | `/soc360-front-react/` | Base de Vite (chemins des assets et routeur) |
 | `VITE_API_BASE_URL` | `https://esn360-backend-v2-dev.whiteforest-96ad5fb7.francecentral.azurecontainerapps.io` | URL du backend Azure dev |
 
 ### Site prod — `.env.production-prod`
 
 | Variable | Valeur | Rôle |
 |---|---|---|
-| `VITE_BASE_PATH` | `/esn360-frontend-prod/` | Base de Vite (chemins des assets et routeur) |
+| `VITE_BASE_PATH` | `/soc360-front-react-prod/` | Base de Vite (chemins des assets et routeur) |
 | `VITE_API_BASE_URL` | `https://esn360-backend-v2-prod.whiteforest-96ad5fb7.francecentral.azurecontainerapps.io` | URL du backend Azure prod (à vérifier après le 1er déploiement du backend) |
 
-> Note Windows (Git Bash) : ces valeurs sont lues depuis les fichiers `.env.*`, ce qui évite la conversion MSYS des chemins `/...` (problème rencontré avec `VITE_BASE_PATH=/esn360-frontend/` passé en argument de commande).
+> Note Windows (Git Bash) : ces valeurs sont lues depuis les fichiers `.env.*`, ce qui évite la conversion MSYS des chemins `/...` (problème rencontré avec `VITE_BASE_PATH=/soc360-front-react/` passé en argument de commande).
 
 ## 4. Déploiement
 
 Depuis la racine du projet :
 
 ```bash
-# Site dev (défaut) — pousse docs/ sur esn360-frontend
+# Site dev (défaut) — pousse docs/ sur soc360-front-react
 ./deploy_front_to_gh_pages.sh
 # ou explicitement
 ./deploy_front_to_gh_pages.sh dev
 
-# Site prod — build dist-prod/ puis pousse docs/ sur esn360-frontend-prod
+# Site prod — build dist-prod/ puis pousse docs/ sur soc360-front-react-prod
 ./deploy_front_to_gh_pages.sh prod
 ```
 
@@ -95,7 +95,7 @@ Déploiement manuel équivalent (prod) :
 
 ```bash
 npm run build:pages:prod
-# puis copier dist-prod/ dans le dossier docs/ du dépôt esn360-frontend-prod et pousser
+# puis copier dist-prod/ dans le dossier docs/ du dépôt soc360-front-react-prod et pousser
 ```
 
 ## 5. Configuration GitHub Pages (une seule fois, par dépôt)
@@ -113,8 +113,8 @@ Le backend doit autoriser l'origine `https://mzamouneisi.github.io` (sinon erreu
 
 - Variable `SECURITY_CORS_ALLOWED_ORIGINS` appliquée sur la Container App (définie par défaut dans `env.server.sh`)
 - Variable `FRONTEND_URL` (liens de reset de mot de passe) :
-  - backend **dev** : `https://mzamouneisi.github.io/esn360-frontend/`
-  - backend **prod** : `https://mzamouneisi.github.io/esn360-frontend-prod/`
+  - backend **dev** : `https://mzamouneisi.github.io/soc360-front-react/`
+  - backend **prod** : `https://mzamouneisi.github.io/soc360-front-react-prod/`
 
 Ces valeurs par défaut sont définies dans `env.server.sh` (blocs `psgsql_azure` et `psgsql_azure_prod`), puis appliquées via un redéploiement :
 
@@ -125,7 +125,7 @@ export JAVA_HOME=/c/pgm/java/jdk-17.0.11
 
 ## 7. Vérification
 
-- Ouvrir `https://mzamouneisi.github.io/esn360-frontend/` (dev) ou `https://mzamouneisi.github.io/esn360-frontend-prod/` (prod)
+- Ouvrir `https://mzamouneisi.github.io/soc360-front-react/` (dev) ou `https://mzamouneisi.github.io/soc360-front-react-prod/` (prod)
 - Se connecter avec le compte de démo (`admin` / `Admin123!` si `SEED_DEMO_DATA=true`)
 - Contrôler que les appels réseau partent vers l'URL du backend correspondant (onglet Network → `https://esn360-backend-v2-<dev|prod>....azurecontainerapps.io`)
 

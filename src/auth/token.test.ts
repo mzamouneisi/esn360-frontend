@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clearToken, getToken, setToken } from './token'
 
-const TOKEN_KEY = 'esn360_token'
+const TOKEN_KEY = 'soc360_token'
 
 describe('token', () => {
   beforeEach(() => {

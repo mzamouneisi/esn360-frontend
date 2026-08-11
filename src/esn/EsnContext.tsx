@@ -25,7 +25,7 @@ interface EsnState {
 
 const EsnContext = createContext<EsnState | undefined>(undefined)
 
-const STORAGE_KEY = 'esn360.selectedEsnId'
+const STORAGE_KEY = 'soc360.selectedEsnId'
 
 export function EsnProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()

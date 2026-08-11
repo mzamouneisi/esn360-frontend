@@ -54,5 +54,5 @@ Voir [DOC_DEPLOY_FRONT_TO_GH_PAGES.md](DOC_DEPLOY_FRONT_TO_GH_PAGES.md) — deux
 
 ## Environnement
 
-- `.env.production` — build dev : base `/esn360-frontend/` + backend Azure dev
-- `.env.production-prod` — build prod : base `/esn360-frontend-prod/` + backend Azure prod
+- `.env.production` — build dev : base `/soc360-front-react/` + backend Azure dev
+- `.env.production-prod` — build prod : base `/soc360-front-react-prod/` + backend Azure prod

@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe('Logs', () => {
   it('affiche les dernières lignes du log', async () => {
-    tailMock.mockResolvedValue({ file: 'C:/logs/esn360.log', lines: ['ligne 1', 'ligne 2'] })
+    tailMock.mockResolvedValue({ file: 'C:/logs/soc360.log', lines: ['ligne 1', 'ligne 2'] })
 
     render(<Logs />)
 

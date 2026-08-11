@@ -5,9 +5,9 @@ import App from './App'
 import { AuthProvider } from './auth/AuthContext'
 import { EsnProvider } from './esn/EsnContext'
 
-const redirect = sessionStorage.getItem('esn360.redirect')
+const redirect = sessionStorage.getItem('soc360.redirect')
 if (redirect) {
-  sessionStorage.removeItem('esn360.redirect')
+  sessionStorage.removeItem('soc360.redirect')
   window.history.replaceState(null, '', redirect)
 }
 

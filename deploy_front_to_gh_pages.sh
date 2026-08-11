@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Deploiement du frontend esn360-frontend sur GitHub Pages (branche main, dossier docs/).
+# Deploiement du frontend soc360-front-react sur GitHub Pages (branche main, dossier docs/).
 # Deux sites distincts (dev et prod) pour appeler chacun leur backend Azure.
 #
 # Usage (depuis la racine du projet) :
 #   ./deploy_front_to_gh_pages.sh            # site DEV (defaut)
 #   ./deploy_front_to_gh_pages.sh dev        # site DEV
-#   ./deploy_front_to_gh_pages.sh prod       # site PROD (deploie vers esn360-frontend-prod)
+#   ./deploy_front_to_gh_pages.sh prod       # site PROD (deploie vers soc360-front-react-prod)
 #
 # Pour le site PROD, definir PROD_PAGES_REPO si le depot du site prod n'est pas
-# esn360-frontend-prod : PROD_PAGES_REPO=git@github.com:USER/REPO.git ./deploy_front_to_gh_pages.sh prod
+# soc360-front-react-prod : PROD_PAGES_REPO=git@github.com:USER/REPO.git ./deploy_front_to_gh_pages.sh prod
 
 set -euo pipefail
 
@@ -20,18 +20,18 @@ case "$TARGET" in
     BRANCH_REQUIRED="main"
     VITE_MODE="production"
     OUT_DIR="docs"
-    PAGES_URL="https://mzamouneisi.github.io/esn360-frontend/"
-    BASE_EXPECTED="/esn360-frontend/"
+    PAGES_URL="https://mzamouneisi.github.io/soc360-front-react/"
+    BASE_EXPECTED="/soc360-front-react/"
     ENV_FILE=".env.production"
     ;;
   prod)
     BRANCH_REQUIRED="main"
     VITE_MODE="production-prod"
     OUT_DIR="dist-prod"
-    PAGES_URL="https://mzamouneisi.github.io/esn360-frontend-prod/"
-    BASE_EXPECTED="/esn360-frontend-prod/"
+    PAGES_URL="https://mzamouneisi.github.io/soc360-front-react-prod/"
+    BASE_EXPECTED="/soc360-front-react-prod/"
     ENV_FILE=".env.production-prod"
-    PROD_PAGES_REPO="${PROD_PAGES_REPO:-git@github.com:mzamouneisi/esn360-frontend-prod.git}"
+    PROD_PAGES_REPO="${PROD_PAGES_REPO:-git@github.com:mzamouneisi/soc360-front-react-prod.git}"
     ;;
   *)
     log "ERROR: Cible inconnue '$TARGET' (valeurs possibles : dev, prod)."
@@ -47,7 +47,7 @@ log() {
 }
 
 if [ ! -f "package.json" ]; then
-  log "ERROR: package.json introuvable. Lancez ce script depuis la racine du projet esn360-frontend."
+  log "ERROR: package.json introuvable. Lancez ce script depuis la racine du projet soc360-front-react."
   exit 1
 fi
 
