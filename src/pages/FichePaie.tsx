@@ -40,15 +40,15 @@ export function FichePaie() {
     () =>
       isConsultant && user?.consultantId
         ? fichePaieApi.findByConsultant(user.consultantId)
-        : user?.esnId
-          ? fichePaieApi.findByEsn(user.esnId)
+        : user?.socId
+          ? fichePaieApi.findBySoc(user.socId)
           : Promise.resolve([] as FichePaieDto[]),
-    [user?.esnId, user?.consultantId, isConsultant],
+    [user?.socId, user?.consultantId, isConsultant],
   )
 
   const { data: summaries } = useAsync(
-    () => (user?.esnId ? consultantsApi.summaries(user.esnId) : Promise.resolve([])),
-    [user?.esnId],
+    () => (user?.socId ? consultantsApi.summaries(user.socId) : Promise.resolve([])),
+    [user?.socId],
   )
 
   const [modalOpen, setModalOpen] = useState(false)

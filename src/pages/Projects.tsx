@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { projectsApi } from '../api/projects'
 import { clientsApi } from '../api/clients'
-import { esnsApi } from '../api/esns'
+import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
@@ -14,7 +14,7 @@ interface FormState {
   name: string
   description: string
   clientId: string
-  esnId: string
+  socId: string
   startDate: string
   endDate: string
   dailyRate: string
@@ -26,7 +26,7 @@ const emptyForm: FormState = {
   name: '',
   description: '',
   clientId: '',
-  esnId: '',
+  socId: '',
   startDate: '',
   endDate: '',
   dailyRate: '',
@@ -40,14 +40,14 @@ export function Projects() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
-    () => projectsApi.findAll(isAdmin ? undefined : { esnId: user?.esnId ?? undefined }),
-    [user?.esnId, isAdmin],
+    () => projectsApi.findAll(isAdmin ? undefined : { socId: user?.socId ?? undefined }),
+    [user?.socId, isAdmin],
   )
   const { data: clients } = useAsync(
-    () => clientsApi.findAll(isAdmin ? undefined : user?.esnId ?? undefined),
-    [user?.esnId, isAdmin],
+    () => clientsApi.findAll(isAdmin ? undefined : user?.socId ?? undefined),
+    [user?.socId, isAdmin],
   )
-  const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
+  const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
 
   const [editing, setEditing] = useState<ProjectDto | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -56,7 +56,7 @@ export function Projects() {
   const [formError, setFormError] = useState<string | null>(null)
 
   function openCreate() {
-    setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') })
+    setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
@@ -67,7 +67,7 @@ export function Projects() {
       name: project.name,
       description: project.description ?? '',
       clientId: String(project.client?.id ?? ''),
-      esnId: String(project.esn?.id ?? user?.esnId ?? ''),
+      socId: String(project.soc?.id ?? user?.socId ?? ''),
       startDate: project.startDate ?? '',
       endDate: project.endDate ?? '',
       dailyRate: project.dailyRate != null ? String(project.dailyRate) : '',
@@ -89,7 +89,7 @@ export function Projects() {
       setFormError('Sélectionnez un client')
       return
     }
-    if (isAdmin && !form.esnId) {
+    if (isAdmin && !form.socId) {
       setFormError('Sélectionnez la société')
       return
     }
@@ -100,7 +100,7 @@ export function Projects() {
         name: form.name.trim(),
         description: form.description || null,
         clientId: Number(form.clientId),
-        esnId: isAdmin ? Number(form.esnId) : user?.esnId ?? 0,
+        socId: isAdmin ? Number(form.socId) : user?.socId ?? 0,
         startDate: form.startDate || null,
         endDate: form.endDate || null,
         dailyRate: form.dailyRate ? Number(form.dailyRate) : null,
@@ -187,9 +187,9 @@ export function Projects() {
               ),
             },
             {
-              key: 'esn',
+              key: 'soc',
               label: 'Société',
-              render: (p) => (isAdmin ? <span>{p.esn?.name ?? '—'}</span> : <span>—</span>),
+              render: (p) => (isAdmin ? <span>{p.soc?.name ?? '—'}</span> : <span>—</span>),
             },
             {
               key: 'active',
@@ -269,13 +269,13 @@ export function Projects() {
             {isAdmin && (
               <Field label="Société">
                 <Select
-                  value={form.esnId}
-                  onChange={(e) => setForm({ ...form, esnId: e.target.value })}
+                  value={form.socId}
+                  onChange={(e) => setForm({ ...form, socId: e.target.value })}
                 >
                   <option value="">Sélectionner…</option>
-                  {(esns ?? []).map((esn) => (
-                    <option key={esn.id} value={esn.id}>
-                      {esn.name}
+                  {(socs ?? []).map((soc) => (
+                    <option key={soc.id} value={soc.id}>
+                      {soc.name}
                     </option>
                   ))}
                 </Select>

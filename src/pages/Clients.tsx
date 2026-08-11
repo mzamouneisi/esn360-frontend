@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { clientsApi } from '../api/clients'
-import { esnsApi } from '../api/esns'
+import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
@@ -10,43 +10,22 @@ import type { ClientDto } from '../api/types'
 
 interface FormState {
   name: string
-  description: string
-  siret: string
-  codeNaf: string
-  website: string
   contactName: string
   contactEmail: string
   contactPhone: string
-  street: string
-  zipCode: string
-  city: string
-  country: string
-  esnId: string
+  notes: string
+  socId: string
   active: boolean
 }
 
 const emptyForm: FormState = {
   name: '',
-  description: '',
-  siret: '',
-  codeNaf: '',
-  website: '',
   contactName: '',
   contactEmail: '',
   contactPhone: '',
-  street: '',
-  zipCode: '',
-  city: '',
-  country: '',
-  esnId: '',
+  notes: '',
+  socId: '',
   active: true,
-}
-
-function formatAddress(client: ClientDto): string {
-  const a = client.address
-  if (!a) return '—'
-  const parts = [a.street, [a.zipCode, a.city].filter(Boolean).join(' '), a.country].filter(Boolean)
-  return parts.length > 0 ? parts.join(', ') : '—'
 }
 
 export function Clients() {
@@ -55,10 +34,10 @@ export function Clients() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
-    () => clientsApi.findAll(isAdmin ? undefined : user?.esnId ?? undefined),
-    [user?.esnId, isAdmin],
+    () => clientsApi.findAll(isAdmin ? undefined : user?.socId ?? undefined),
+    [user?.socId, isAdmin],
   )
-  const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
+  const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
 
   const [editing, setEditing] = useState<ClientDto | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -67,7 +46,7 @@ export function Clients() {
   const [formError, setFormError] = useState<string | null>(null)
 
   function openCreate() {
-    setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') })
+    setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
@@ -76,18 +55,11 @@ export function Clients() {
   function openEdit(client: ClientDto) {
     setForm({
       name: client.name,
-      description: client.description ?? '',
-      siret: client.siret ?? '',
-      codeNaf: client.codeNaf ?? '',
-      website: client.website ?? '',
       contactName: client.contactName ?? '',
       contactEmail: client.contactEmail ?? '',
       contactPhone: client.contactPhone ?? '',
-      street: client.address?.street ?? '',
-      zipCode: client.address?.zipCode ?? '',
-      city: client.address?.city ?? '',
-      country: client.address?.country ?? '',
-      esnId: String(client.esn?.id ?? user?.esnId ?? ''),
+      notes: client.notes ?? '',
+      socId: String(client.soc?.id ?? user?.socId ?? ''),
       active: client.active,
     })
     setEditing(client)
@@ -101,30 +73,20 @@ export function Clients() {
       setFormError('Le nom du client est obligatoire')
       return
     }
-    if (isAdmin && !form.esnId) {
+    if (isAdmin && !form.socId) {
       setFormError('Sélectionnez la société')
       return
     }
     setSubmitting(true)
     setFormError(null)
     try {
-      const address = {
-        street: form.street || null,
-        zipCode: form.zipCode || null,
-        city: form.city || null,
-        country: form.country || null,
-      }
       const payload = {
         name: form.name.trim(),
-        description: form.description.trim() || null,
-        siret: form.siret.trim() || null,
-        codeNaf: form.codeNaf.trim() || null,
-        website: form.website.trim() || null,
         contactName: form.contactName || null,
         contactEmail: form.contactEmail || null,
         contactPhone: form.contactPhone || null,
-        address,
-        esnId: isAdmin ? Number(form.esnId) : user?.esnId ?? undefined,
+        notes: form.notes.trim() || null,
+        socId: isAdmin ? Number(form.socId) : user?.socId ?? undefined,
         active: form.active,
       }
       if (editing) {
@@ -191,14 +153,16 @@ export function Clients() {
               ),
             },
             {
-              key: 'address',
-              label: 'Adresse',
-              render: (c) => <span className="text-gray-500">{formatAddress(c)}</span>,
+              key: 'soc',
+              label: 'Société',
+              render: (c) => (isAdmin ? <span>{c.soc?.name ?? '—'}</span> : <span>—</span>),
             },
             {
-              key: 'esn',
-              label: 'Société',
-              render: (c) => (isAdmin ? <span>{c.esn?.name ?? '—'}</span> : <span>—</span>),
+              key: 'notes',
+              label: 'Notes',
+              render: (c) => (
+                <span className="line-clamp-2 max-w-56 text-xs text-gray-500">{c.notes ?? '—'}</span>
+              ),
             },
             {
               key: 'active',
@@ -260,35 +224,12 @@ export function Clients() {
           <Field label="Nom du client *">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
-          <Field label="Description">
+          <Field label="Notes (infos spécifiques pour votre société)">
             <Textarea
               rows={2}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </Field>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="SIRET">
-              <Input
-                value={form.siret}
-                onChange={(e) => setForm({ ...form, siret: e.target.value })}
-                placeholder="12345678901234"
-              />
-            </Field>
-            <Field label="Code NAF">
-              <Input
-                value={form.codeNaf}
-                onChange={(e) => setForm({ ...form, codeNaf: e.target.value })}
-                placeholder="6202A"
-              />
-            </Field>
-          </div>
-          <Field label="Site web">
-            <Input
-              type="url"
-              value={form.website}
-              onChange={(e) => setForm({ ...form, website: e.target.value })}
-              placeholder="https://…"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Conditions particulières, interlocuteurs, remarques…"
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -312,46 +253,16 @@ export function Clients() {
               onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
             />
           </Field>
-          <div className="space-y-2">
-            <Field label="Adresse">
-              <Input
-                value={form.street}
-                onChange={(e) => setForm({ ...form, street: e.target.value })}
-                placeholder="Rue, voie…"
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Code postal">
-                <Input
-                  value={form.zipCode}
-                  onChange={(e) => setForm({ ...form, zipCode: e.target.value })}
-                />
-              </Field>
-              <Field label="Ville">
-                <Input
-                  value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
-                />
-              </Field>
-            </div>
-            <Field label="Pays">
-              <Input
-                value={form.country}
-                onChange={(e) => setForm({ ...form, country: e.target.value })}
-                placeholder="FR"
-              />
-            </Field>
-          </div>
           {isAdmin && (
             <Field label="Société">
               <Select
-                value={form.esnId}
-                onChange={(e) => setForm({ ...form, esnId: e.target.value })}
+                value={form.socId}
+                onChange={(e) => setForm({ ...form, socId: e.target.value })}
               >
                 <option value="">Sélectionner…</option>
-                {(esns ?? []).map((esn) => (
-                  <option key={esn.id} value={esn.id}>
-                    {esn.name}
+                {(socs ?? []).map((soc) => (
+                  <option key={soc.id} value={soc.id}>
+                    {soc.name}
                   </option>
                 ))}
               </Select>

@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { useEsn } from './EsnContext'
+import { useSoc } from './SocContext'
 import { Button, Field, Input, Textarea } from '../components/ui'
 import { Modal } from '../components/data'
 
-export function EsnSelector() {
-  const { esns, selectedEsn, selectEsn, canAddEsn, loading } = useEsn()
+export function SocSelector() {
+  const { socs, selectedSoc, selectSoc, canAddSoc, loading } = useSoc()
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
 
@@ -19,7 +19,7 @@ export function EsnSelector() {
         title="Société active"
       >
         <span className="max-w-48 truncate">
-          {selectedEsn?.name ?? (esns.length > 0 ? 'Choisir une société' : 'Espace de travail')}
+          {selectedSoc?.name ?? (socs.length > 0 ? 'Choisir une société' : 'Espace de travail')}
         </span>
         <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path
@@ -34,30 +34,30 @@ export function EsnSelector() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
           <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
-            {loading && esns.length === 0 ? (
+            {loading && socs.length === 0 ? (
               <p className="px-3 py-2 text-sm text-gray-500">Chargement…</p>
-            ) : esns.length === 0 ? (
+            ) : socs.length === 0 ? (
               <p className="px-3 py-2 text-sm text-gray-500">Aucune société associée</p>
             ) : (
               <ul role="listbox" aria-label="Société active">
-                {esns.map((esn) => (
-                  <li key={esn.id}>
+                {socs.map((soc) => (
+                  <li key={soc.id}>
                     <button
                       type="button"
                       role="option"
-                      aria-selected={esn.id === selectedEsn?.id}
+                      aria-selected={soc.id === selectedSoc?.id}
                       onClick={() => {
-                        selectEsn(esn.id)
+                        selectSoc(soc.id)
                         setOpen(false)
                       }}
                       className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-                        esn.id === selectedEsn?.id
+                        soc.id === selectedSoc?.id
                           ? 'bg-brand-50 font-medium text-brand-700'
                           : 'text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="truncate">{esn.name}</span>
-                      {esn.id === selectedEsn?.id && (
+                      <span className="truncate">{soc.name}</span>
+                      {soc.id === selectedSoc?.id && (
                         <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path
                             fillRule="evenodd"
@@ -72,7 +72,7 @@ export function EsnSelector() {
               </ul>
             )}
 
-            {canAddEsn && (
+            {canAddSoc && (
               <div className="mt-2 border-t border-gray-100 pt-2">
                 <button
                   type="button"
@@ -91,13 +91,13 @@ export function EsnSelector() {
         </>
       )}
 
-      {canAddEsn && <AddEsnModal open={adding} onClose={() => setAdding(false)} />}
+      {canAddSoc && <AddSocModal open={adding} onClose={() => setAdding(false)} />}
     </div>
   )
 }
 
-function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { addEsn } = useEsn()
+function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { addSoc } = useSoc()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [siret, setSiret] = useState('')
@@ -139,8 +139,8 @@ function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     setSaving(true)
     setError(null)
     try {
-      await addEsn({
-        esnName: name.trim(),
+      await addSoc({
+        socName: name.trim(),
         description: description.trim() || undefined,
         siret: siret.trim() || undefined,
         codeNaf: codeNaf.trim() || undefined,
@@ -170,13 +170,13 @@ function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           <Button type="button" onClick={close} className="!w-auto !bg-gray-100 !text-gray-700 hover:!bg-gray-200">
             Annuler
           </Button>
-          <Button type="submit" form="add-esn-form" disabled={saving} className="!w-auto">
+          <Button type="submit" form="add-soc-form" disabled={saving} className="!w-auto">
             {saving ? 'Enregistrement…' : "Inscrire la société"}
           </Button>
         </>
       }
     >
-      <form id="add-esn-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="add-soc-form" onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}

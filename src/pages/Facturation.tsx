@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import { esnsApi } from '../api/esns'
+import { socsApi } from '../api/socs'
 import { projectsApi } from '../api/projects'
 import { crasApi } from '../api/cras'
 import { ApiError } from '../api/client'
@@ -14,7 +14,7 @@ import {
   formatMoney,
   statusBadge,
 } from '../lib/format'
-import type { EsnDto } from '../api/types'
+import type { SocDto } from '../api/types'
 
 export function Facturation() {
   const { user } = useAuth()
@@ -24,24 +24,24 @@ export function Facturation() {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [exporting, setExporting] = useState<null | 'csv' | 'pdf'>(null)
 
-  const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
-  const [selectedEsn, setSelectedEsn] = useState<number | null>(user?.esnId ?? null)
+  const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
+  const [selectedSoc, setSelectedSoc] = useState<number | null>(user?.socId ?? null)
 
-  const esnId = isAdmin ? selectedEsn : user?.esnId ?? null
+  const socId = isAdmin ? selectedSoc : user?.socId ?? null
 
   const { data: detail, loading: detailLoading, error: detailError } = useAsync(
-    () => (esnId ? esnsApi.getById(esnId) : Promise.resolve(null)),
-    [esnId],
+    () => (socId ? socsApi.getById(socId) : Promise.resolve(null)),
+    [socId],
   )
 
   const { data: projects } = useAsync(
-    () => (esnId ? projectsApi.findAll({ esnId }) : Promise.resolve([])),
-    [esnId],
+    () => (socId ? projectsApi.findAll({ socId }) : Promise.resolve([])),
+    [socId],
   )
 
   const { data: monthCras } = useAsync(
-    () => (esnId ? crasApi.findByMonth(year, month, esnId) : Promise.resolve([])),
-    [esnId, year, month],
+    () => (socId ? crasApi.findByMonth(year, month, socId) : Promise.resolve([])),
+    [socId, year, month],
   )
 
   if (!user) return null
@@ -54,13 +54,13 @@ export function Facturation() {
   const totalPaid = (detail?.payments ?? []).reduce((sum, p) => sum + p.amount, 0)
 
   async function handleExport(kind: 'csv' | 'pdf') {
-    if (!esnId) return
+    if (!socId) return
     setExporting(kind)
     try {
       if (kind === 'csv') {
-        await crasApi.exportCsv({ esnId, month, year })
+        await crasApi.exportCsv({ socId, month, year })
       } else {
-        await crasApi.exportPdf({ esnId, month, year })
+        await crasApi.exportPdf({ socId, month, year })
       }
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
@@ -108,13 +108,13 @@ export function Facturation() {
             Société :
             <Select
               className="w-64"
-              value={selectedEsn ?? ''}
-              onChange={(e) => setSelectedEsn(e.target.value ? Number(e.target.value) : null)}
+              value={selectedSoc ?? ''}
+              onChange={(e) => setSelectedSoc(e.target.value ? Number(e.target.value) : null)}
             >
               <option value="">Sélectionner…</option>
-              {(esns ?? []).map((esn: EsnDto) => (
-                <option key={esn.id} value={esn.id}>
-                  {esn.name}
+              {(socs ?? []).map((soc: SocDto) => (
+                <option key={soc.id} value={soc.id}>
+                  {soc.name}
                 </option>
               ))}
             </Select>

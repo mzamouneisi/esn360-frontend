@@ -1,10 +1,10 @@
 import { api } from './client'
 import type {
-  AddEsnPayload,
+  AddSocPayload,
   AuthResponse,
   ConnectionDto,
   EmailSentResponse,
-  EsnLiteDto,
+  SocLiteDto,
   ResetResponse,
   UserDto,
 } from './types'
@@ -14,8 +14,8 @@ export interface LoginPayload {
   password: string
 }
 
-export interface RegisterEsnPayload {
-  esnName: string
+export interface RegisterSocPayload {
+  socName: string
   siret?: string
   adminFirstName: string
   adminLastName: string
@@ -26,8 +26,8 @@ export interface RegisterEsnPayload {
 
 export const authApi = {
   login: (payload: LoginPayload) => api.post<AuthResponse>('/auth/login', payload),
-  registerEsn: (payload: RegisterEsnPayload) =>
-    api.post<EmailSentResponse>('/auth/register-esn', payload),
+  registerSoc: (payload: RegisterSocPayload) =>
+    api.post<EmailSentResponse>('/auth/register-soc', payload),
   verifyEmail: (token: string) =>
     api.post<AuthResponse>('/auth/verify-email', { token }),
   resendVerification: (email: string) =>
@@ -39,8 +39,8 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<void>('/auth/change-password', { currentPassword, newPassword }),
   me: () => api.get<UserDto>('/auth/me'),
-  myEsns: () => api.get<EsnLiteDto[]>('/auth/me/esns'),
-  addEsn: (payload: AddEsnPayload) =>
-    api.post<EsnLiteDto>('/auth/me/esns', payload),
+  mySocs: () => api.get<SocLiteDto[]>('/auth/me/socs'),
+  addSoc: (payload: AddSocPayload) =>
+    api.post<SocLiteDto>('/auth/me/socs', payload),
   connections: () => api.get<ConnectionDto[]>('/auth/connections'),
 }

@@ -5,7 +5,7 @@ import { ApiError } from '../api/client'
 import { Alert, Button, Card, Field, Input, Spinner } from '../components/ui'
 
 export function Register() {
-  const [esnName, setEsnName] = useState('')
+  const [socName, setSocName] = useState('')
   const [siret, setSiret] = useState('')
   const [adminFirstName, setAdminFirstName] = useState('')
   const [adminLastName, setAdminLastName] = useState('')
@@ -29,8 +29,8 @@ export function Register() {
 
     setSubmitting(true)
     try {
-      const response = await authApi.registerEsn({
-        esnName,
+      const response = await authApi.registerSoc({
+        socName,
         siret: siret || undefined,
         adminFirstName,
         adminLastName,
@@ -98,8 +98,8 @@ export function Register() {
             <Field label="Nom de la société">
               <Input
                 type="text"
-                value={esnName}
-                onChange={(e) => setEsnName(e.target.value)}
+                value={socName}
+                onChange={(e) => setSocName(e.target.value)}
                 required
                 placeholder="Ma société de conseil"
               />

@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { esnsApi } from '../api/esns'
+import { socsApi } from '../api/socs'
 import { useAsync } from '../lib/useAsync'
 import { Card, Select } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, PageHeader, Table } from '../components/data'
 import { SUBSCRIPTION_STATUS_LABELS, formatDate, formatMoney, statusBadge } from '../lib/format'
 
-export function EsnAdmin() {
-  const { data: esns, loading, error } = useAsync(() => esnsApi.findAll(), [])
+export function SocAdmin() {
+  const { data: socs, loading, error } = useAsync(() => socsApi.findAll(), [])
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const { data: detail, loading: detailLoading } = useAsync(
-    () => (selectedId ? esnsApi.getById(selectedId) : Promise.resolve(null)),
+    () => (selectedId ? socsApi.getById(selectedId) : Promise.resolve(null)),
     [selectedId],
   )
 
@@ -21,11 +21,11 @@ export function EsnAdmin() {
       {error && <ErrorBlock message={error} />}
       {loading && <LoadingBlock />}
 
-      {!loading && esns && esns.length === 0 && (
+      {!loading && socs && socs.length === 0 && (
         <EmptyState title="Aucune société" description="Aucune société enregistrée sur la plateforme." />
       )}
 
-      {!loading && esns && esns.length > 0 && (
+      {!loading && socs && socs.length > 0 && (
         <>
           <Card className="mb-6 p-4">
             <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -36,9 +36,9 @@ export function EsnAdmin() {
                 onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
               >
                 <option value="">Sélectionner…</option>
-                {esns.map((esn) => (
-                  <option key={esn.id} value={esn.id}>
-                    {esn.name}
+                {socs.map((soc) => (
+                  <option key={soc.id} value={soc.id}>
+                    {soc.name}
                   </option>
                 ))}
               </Select>
@@ -56,18 +56,18 @@ export function EsnAdmin() {
               <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Card className="p-5">
                   <p className="text-sm font-medium text-gray-500">Société</p>
-                  <p className="mt-1 font-semibold text-gray-900">{detail.esn.name}</p>
+                  <p className="mt-1 font-semibold text-gray-900">{detail.soc.name}</p>
                   <p className="text-xs text-gray-500">
-                    {detail.esn.siret ? `SIRET ${detail.esn.siret}` : 'SIRET non renseigné'}
+                    {detail.soc.siret ? `SIRET ${detail.soc.siret}` : 'SIRET non renseigné'}
                   </p>
-                  {detail.esn.website && (
+                  {detail.soc.website && (
                     <a
-                      href={detail.esn.website}
+                      href={detail.soc.website}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-brand-600 hover:underline"
                     >
-                      {detail.esn.website}
+                      {detail.soc.website}
                     </a>
                   )}
                 </Card>

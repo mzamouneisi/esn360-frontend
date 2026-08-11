@@ -2,7 +2,7 @@ import { api } from './client'
 import type { ActivityDto, ActivityRequest, ActivityTypeDto, ActivityTypeRequest } from './types'
 
 export const activitiesApi = {
-  findAll: (params?: { esnId?: number; typeId?: number }) =>
+  findAll: (params?: { socId?: number; typeId?: number }) =>
     api.get<ActivityDto[]>('/activities', params),
   getById: (id: number) => api.get<ActivityDto>(`/activities/${id}`),
   create: (request: ActivityRequest) => api.post<ActivityDto>('/activities', request),
@@ -12,7 +12,7 @@ export const activitiesApi = {
 }
 
 export const activityTypesApi = {
-  findAll: (esnId: number) => api.get<ActivityTypeDto[]>('/activity-types', { esnId }),
+  findAll: (socId: number) => api.get<ActivityTypeDto[]>('/activity-types', { socId }),
   create: (body: ActivityTypeRequest) => api.post<ActivityTypeDto>('/activity-types', body),
   update: (id: number, body: ActivityTypeRequest) =>
     api.put<ActivityTypeDto>(`/activity-types/${id}`, body),

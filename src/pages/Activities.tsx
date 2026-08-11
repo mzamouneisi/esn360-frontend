@@ -32,13 +32,13 @@ export function Activities() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
-    () => activitiesApi.findAll(isAdmin ? undefined : user?.esnId ? { esnId: user.esnId } : undefined),
-    [user?.esnId, isAdmin],
+    () => activitiesApi.findAll(isAdmin ? undefined : user?.socId ? { socId: user.socId } : undefined),
+    [user?.socId, isAdmin],
   )
-  const typesEsnId = user?.esnId ?? null
+  const typesSocId = user?.socId ?? null
   const { data: types, reload: reloadTypes } = useAsync(
-    () => (typesEsnId ? activityTypesApi.findAll(typesEsnId) : Promise.resolve([] as ActivityTypeDto[])),
-    [typesEsnId],
+    () => (typesSocId ? activityTypesApi.findAll(typesSocId) : Promise.resolve([] as ActivityTypeDto[])),
+    [typesSocId],
   )
 
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -84,7 +84,7 @@ export function Activities() {
       setTypeError('Code et libellé sont obligatoires')
       return
     }
-    if (!typesEsnId) {
+    if (!typesSocId) {
       setTypeError('Aucune société associée à votre compte')
       return
     }
@@ -92,7 +92,7 @@ export function Activities() {
     setTypeError(null)
     try {
       const body: ActivityTypeRequest = {
-        esnId: typesEsnId,
+        socId: typesSocId,
         code: typeForm.code.trim().toUpperCase(),
         labelFr: typeForm.labelFr.trim(),
         labelEn: typeForm.labelEn.trim() || null,
@@ -117,7 +117,7 @@ export function Activities() {
     if (!window.confirm(`Désactiver le type « ${t.labelFr} » ?`)) return
     try {
       await activityTypesApi.update(t.id, {
-        esnId: t.esnId,
+        socId: t.socId,
         code: t.code,
         labelFr: t.labelFr,
         labelEn: t.labelEn ?? null,
@@ -157,8 +157,8 @@ export function Activities() {
       setFormError('Nom et type sont obligatoires')
       return
     }
-    const esnId = user?.esnId ?? null
-    if (!esnId) {
+    const socId = user?.socId ?? null
+    if (!socId) {
       setFormError('Aucune société associée à votre compte')
       return
     }
@@ -171,7 +171,7 @@ export function Activities() {
         price: Number(form.price) || 0,
         currency: form.currency || 'EUR',
         typeId: Number(form.typeId),
-        esnId,
+        socId,
         active: form.active,
       }
       if (editing) {
@@ -206,7 +206,7 @@ export function Activities() {
         actions={
           canEdit ? (
             <>
-              {user.esnId && (
+              {user.socId && (
                 <InlineButton onClick={openTypeCreate}>Gérer les types</InlineButton>
               )}
               <Button className="w-auto" onClick={openCreate}>
@@ -264,9 +264,9 @@ export function Activities() {
               ),
             },
             {
-              key: 'esn',
+              key: 'soc',
               label: 'Société',
-              render: (a) => <span className="text-gray-500">{a.esn?.name ?? '—'}</span>,
+              render: (a) => <span className="text-gray-500">{a.soc?.name ?? '—'}</span>,
             },
             {
               key: 'active',

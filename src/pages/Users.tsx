@@ -77,9 +77,9 @@ export function Users() {
                 render: (u) => <Badge kind="info">{ROLE_LABELS[u.role] ?? u.role}</Badge>,
               },
               {
-                key: 'esn',
+                key: 'soc',
                 label: 'Société',
-                render: (u) => <span className="text-gray-500">{u.esnName ?? '—'}</span>,
+                render: (u) => <span className="text-gray-500">{u.socName ?? '—'}</span>,
               },
               {
                 key: 'active',

@@ -2,7 +2,7 @@ import { api } from './client'
 import type { ProjectDto, ProjectRequest } from './types'
 
 export const projectsApi = {
-  findAll: (params?: { esnId?: number; clientId?: number }) =>
+  findAll: (params?: { socId?: number; clientId?: number }) =>
     api.get<ProjectDto[]>('/projects', params),
   getById: (id: number) => api.get<ProjectDto>(`/projects/${id}`),
   create: (request: ProjectRequest) => api.post<ProjectDto>('/projects', request),

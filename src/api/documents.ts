@@ -3,20 +3,20 @@ import type { HrDocumentDto } from './types'
 
 export interface DocumentUploadRequest {
   consultantId?: number | null
-  esnId?: number | null
+  socId?: number | null
   category: string
   expiresAt?: string | null
   description?: string | null
 }
 
 export const documentsApi = {
-  findAll: (params?: { consultantId?: number; esnId?: number }) =>
+  findAll: (params?: { consultantId?: number; socId?: number }) =>
     api.get<HrDocumentDto[]>('/documents', params),
   upload: (file: File, request: DocumentUploadRequest) => {
     const formData = new FormData()
     formData.append('file', file)
     if (request.consultantId) formData.append('consultantId', String(request.consultantId))
-    if (request.esnId) formData.append('esnId', String(request.esnId))
+    if (request.socId) formData.append('socId', String(request.socId))
     formData.append('category', request.category)
     if (request.expiresAt) formData.append('expiresAt', request.expiresAt)
     if (request.description) formData.append('description', request.description)

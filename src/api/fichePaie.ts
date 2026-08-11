@@ -15,7 +15,7 @@ export interface CreateFichePaieRequest {
 export const fichePaieApi = {
   findByConsultant: (consultantId: number) =>
     api.get<FichePaieDto[]>(`/fiche-paie/consultant/${consultantId}`),
-  findByEsn: (esnId: number) => api.get<FichePaieDto[]>(`/fiche-paie/esn/${esnId}`),
+  findBySoc: (socId: number) => api.get<FichePaieDto[]>(`/fiche-paie/soc/${socId}`),
   create: (request: CreateFichePaieRequest) =>
     api.post<FichePaieDto>('/fiche-paie', request),
   uploadFile: (id: number, file: File) => {

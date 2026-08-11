@@ -18,13 +18,13 @@ export function Documents() {
     () =>
       isConsultant && user?.consultantId
         ? documentsApi.findAll({ consultantId: user.consultantId })
-        : documentsApi.findAll({ esnId: user?.esnId ?? undefined }),
-    [user?.esnId, user?.consultantId, isConsultant],
+        : documentsApi.findAll({ socId: user?.socId ?? undefined }),
+    [user?.socId, user?.consultantId, isConsultant],
   )
 
   const { data: summaries } = useAsync(
-    () => (user?.esnId ? consultantsApi.summaries(user.esnId) : Promise.resolve([])),
-    [user?.esnId],
+    () => (user?.socId ? consultantsApi.summaries(user.socId) : Promise.resolve([])),
+    [user?.socId],
   )
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -65,7 +65,7 @@ export function Documents() {
           : isConsultant
             ? (user?.consultantId ?? null)
             : null,
-        esnId: user?.esnId ?? null,
+        socId: user?.socId ?? null,
         category,
         expiresAt: expiresAt || null,
         description: description || null,

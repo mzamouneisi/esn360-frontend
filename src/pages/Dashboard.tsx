@@ -1,5 +1,5 @@
 import { useAuth } from '../auth/AuthContext'
-import { useEsn } from '../esn/EsnContext'
+import { useSoc } from '../soc/SocContext'
 import { Card } from '../components/ui'
 import { Badge, LoadingBlock, ErrorBlock } from '../components/data'
 import { dashboardApi } from '../api/dashboard'
@@ -16,14 +16,14 @@ import { Link } from 'react-router-dom'
 
 export function Dashboard() {
   const { user } = useAuth()
-  const { selectedEsn, selectedEsnId } = useEsn()
-  const { data, loading, error } = useAsync(() => dashboardApi.overview(), [selectedEsnId], {
+  const { selectedSoc, selectedSocId } = useSoc()
+  const { data, loading, error } = useAsync(() => dashboardApi.overview(), [selectedSocId], {
     enabled: !!user,
   })
 
   if (!user) return null
 
-  const activeEsnName = selectedEsn?.name ?? user.esnName
+  const activeSocName = selectedSoc?.name ?? user.socName
 
   const now = new Date()
   const month = now.getMonth() + 1
@@ -37,7 +37,7 @@ export function Dashboard() {
         </h2>
         <p className="mt-1 text-sm text-gray-500">
           Voici un aperçu de votre activité
-          {activeEsnName ? ` chez ${activeEsnName}` : ''} · {monthLabel(month)} {year}.
+          {activeSocName ? ` chez ${activeSocName}` : ''} · {monthLabel(month)} {year}.
         </p>
       </div>
 
@@ -49,9 +49,9 @@ export function Dashboard() {
           {user.role === 'ADMIN' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Utilisateurs" value={data.totalUsers ?? 0} to="/utilisateurs" />
-              <StatCard label="Sociétés" value={data.totalEsns ?? 0} to="/esn" />
+              <StatCard label="Sociétés" value={data.totalSocs ?? 0} to="/soc" />
               <StatCard label="Consultants" value={data.totalConsultants ?? 0} to="/consultants" />
-              <StatCard label="Abonnements actifs" value={data.activeSubscriptions ?? 0} to="/esn" />
+              <StatCard label="Abonnements actifs" value={data.activeSubscriptions ?? 0} to="/soc" />
             </div>
           )}
 
@@ -148,7 +148,7 @@ export function Dashboard() {
           <InfoRow label="Nom" value={`${user.firstName} ${user.lastName}`} />
           <InfoRow label="E-mail" value={user.email} />
           <InfoRow label="Rôle" value={ROLE_LABELS[user.role]} />
-          <InfoRow label="Société" value={activeEsnName ?? '—'} />
+          <InfoRow label="Société" value={activeSocName ?? '—'} />
           <InfoRow label="Téléphone" value={user.phone ?? '—'} />
           <InfoRow label="Identifiant" value={user.username} />
         </dl>

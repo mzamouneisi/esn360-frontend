@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { NotificationBell } from './NotificationBell'
-import { EsnSelector } from '../esn/EsnSelector'
+import { SocSelector } from '../soc/SocSelector'
 import { ROLE_LABELS, initials } from '../lib/format'
 import type { Role } from '../api/types'
 
@@ -40,7 +40,7 @@ const ICONS = {
   messages: 'M20 2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14l4 4V4a2 2 0 0 0-2-2Zm-2 12H6v-2h12v2Zm0-3H6V9h12v2Zm0-3H6V6h12v2Z',
   support: 'M11 18h2v-2h-2v2Zm1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8Zm0-14a4 4 0 0 0-4 4h2a2 2 0 1 1 4 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4Z',
   users: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z',
-  esn: 'M11 7h2v2h-2V7Zm0 4h2v6h-2v-6Zm1-9a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8Z',
+  soc: 'M11 7h2v2h-2V7Zm0 4h2v6h-2v-6Zm1-9a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8Z',
   tables: 'M2 20h20v-4H2v4Zm2-3h2v2H4v-2Zm-2-4h20v-4H2v4Zm4-3H4v-2h2v2Zm-4-4h20V4H2v4Z',
   logs: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 2v12h16V6H4Zm3 3 3 3-3 3 1.5 1.5L12 12 8.5 7.5 7 9Zm6 6h4v2h-4v-2Z',
   profile: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z',
@@ -132,7 +132,7 @@ export function MainLayout() {
       title: 'Administration',
       items: [
         { to: '/utilisateurs', label: 'Utilisateurs', icon: ICONS.users },
-        { to: '/esn', label: 'Sociétés', icon: ICONS.esn },
+        { to: '/soc', label: 'Sociétés', icon: ICONS.soc },
         { to: '/tables', label: 'Base de données', icon: ICONS.tables },
         { to: '/logs', label: 'Logs du serveur', icon: ICONS.logs },
       ],
@@ -156,51 +156,62 @@ export function MainLayout() {
         </nav>
 
         <div className="border-t border-gray-800 p-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
-              {initials(user.firstName, user.lastName)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">
-                {user.firstName} {user.lastName}
-              </p>
-              <p className="truncate text-xs text-gray-400">{ROLE_LABELS[user.role]}</p>
-            </div>
-          </div>
-          <div className="mt-3 flex gap-1">
-            <NavLink
-              to="/profil"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-gray-800 hover:text-white"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d={ICONS.profile} />
-              </svg>
-              Profil
-            </NavLink>
-            <button
-              onClick={logout}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-red-900/40 hover:text-red-300"
-              title="Se déconnecter"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5ZM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5Z" />
-              </svg>
-              Quitter
-            </button>
-          </div>
+          <NavLink
+            to="/profil"
+            className="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-gray-300 transition hover:bg-gray-800 hover:text-white"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d={ICONS.profile} />
+            </svg>
+            Profil
+          </NavLink>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6">
           <div>
-            <EsnSelector />
+            {isAdmin ? (
+              <NavLink
+                to="/"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-brand-700"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d={ICONS.dashboard} />
+                </svg>
+                Dashboard
+              </NavLink>
+            ) : (
+              <SocSelector />
+            )}
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-              {ROLE_LABELS[user.role]}
-            </span>
+            <NavLink
+              to="/profil"
+              title="Voir mon profil"
+              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3 shadow-sm transition hover:border-brand-600 hover:shadow"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                {initials(user.firstName, user.lastName)}
+              </div>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-gray-900">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-xs text-gray-500">{ROLE_LABELS[user.role]}</p>
+              </div>
+            </NavLink>
+            <button
+              onClick={logout}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-red-50 hover:text-red-600"
+              title="Se déconnecter"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5ZM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5Z" />
+              </svg>
+              Quitter
+            </button>
           </div>
         </header>
 

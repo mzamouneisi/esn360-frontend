@@ -34,15 +34,15 @@ export function CraList() {
     [user?.consultantId, year],
   )
 
-  const esnCras = useAsync(
+  const socCras = useAsync(
     () =>
-      user?.esnId
-        ? crasApi.findByMonth(year, month, user.esnId)
+      user?.socId
+        ? crasApi.findByMonth(year, month, user.socId)
         : Promise.resolve([] as CraDto[]),
-    [user?.esnId, year, month],
+    [user?.socId, year, month],
   )
 
-  const { data, loading, error, reload } = isConsultant ? ownCras : esnCras
+  const { data, loading, error, reload } = isConsultant ? ownCras : socCras
 
   if (!user) return null
 
@@ -70,14 +70,14 @@ export function CraList() {
   }
 
   async function handleExport(kind: 'csv' | 'pdf') {
-    const esnId = user?.esnId
-    if (!esnId) return
+    const socId = user?.socId
+    if (!socId) return
     setExporting(kind)
     try {
       if (kind === 'csv') {
-        await crasApi.exportCsv({ esnId, month, year })
+        await crasApi.exportCsv({ socId, month, year })
       } else {
-        await crasApi.exportPdf({ esnId, month, year })
+        await crasApi.exportPdf({ socId, month, year })
       }
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
@@ -92,7 +92,7 @@ export function CraList() {
         title="CRA"
         subtitle="Comptes rendus d'activité par consultant et par mois"
         actions={
-          !isConsultant && user.esnId ? (
+          !isConsultant && user.socId ? (
             <>
               <InlineButton onClick={() => handleExport('csv')} disabled={exporting !== null}>
                 {exporting === 'csv' ? <Spinner /> : 'Exporter CSV'}

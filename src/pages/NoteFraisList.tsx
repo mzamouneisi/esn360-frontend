@@ -56,24 +56,24 @@ export function NoteFraisList() {
     () =>
       isConsultant && user?.consultantId
         ? noteFraisApi.findByConsultantYear(user.consultantId, year)
-        : user?.esnId
-          ? noteFraisApi.findByEsnYear(user.esnId, year)
+        : user?.socId
+          ? noteFraisApi.findBySocYear(user.socId, year)
           : Promise.resolve([] as NoteFraisDto[]),
-    [user?.esnId, user?.consultantId, isConsultant, year],
+    [user?.socId, user?.consultantId, isConsultant, year],
   )
 
   const { data: summaries } = useAsync(
-    () => (user?.esnId ? consultantsApi.summaries(user.esnId) : Promise.resolve([])),
-    [user?.esnId],
+    () => (user?.socId ? consultantsApi.summaries(user.socId) : Promise.resolve([])),
+    [user?.socId],
   )
 
   const { data: totalsByMonth } = useAsync(
-    () => (user?.esnId && !isConsultant ? noteFraisApi.totalsByMonth(user.esnId, year) : Promise.resolve({} as Record<string, number>)),
-    [user?.esnId, isConsultant, year],
+    () => (user?.socId && !isConsultant ? noteFraisApi.totalsByMonth(user.socId, year) : Promise.resolve({} as Record<string, number>)),
+    [user?.socId, isConsultant, year],
   )
   const { data: totalsByCategory } = useAsync(
-    () => (user?.esnId && !isConsultant ? noteFraisApi.totalsByCategory(user.esnId, year) : Promise.resolve({} as Record<string, number>)),
-    [user?.esnId, isConsultant, year],
+    () => (user?.socId && !isConsultant ? noteFraisApi.totalsByCategory(user.socId, year) : Promise.resolve({} as Record<string, number>)),
+    [user?.socId, isConsultant, year],
   )
 
   const [form, setForm] = useState<FormState>({

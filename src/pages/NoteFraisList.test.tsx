@@ -6,7 +6,7 @@ import { NoteFraisList } from './NoteFraisList'
 import type { NoteFraisDto, UserDto } from '../api/types'
 
 const {
-  findByEsnYearMock,
+  findBySocYearMock,
   findByConsultantYearMock,
   totalsByMonthMock,
   totalsByCategoryMock,
@@ -18,7 +18,7 @@ const {
   summariesMock,
   userMock,
 } = vi.hoisted(() => ({
-  findByEsnYearMock: vi.fn(),
+  findBySocYearMock: vi.fn(),
   findByConsultantYearMock: vi.fn(),
   totalsByMonthMock: vi.fn(),
   totalsByCategoryMock: vi.fn(),
@@ -44,7 +44,7 @@ vi.mock('../auth/AuthContext', () => ({
 
 vi.mock('../api/noteFrais', () => ({
   noteFraisApi: {
-    findByEsnYear: findByEsnYearMock,
+    findBySocYear: findBySocYearMock,
     findByConsultantYear: findByConsultantYearMock,
     getById: vi.fn(),
     create: createMock,
@@ -66,14 +66,14 @@ vi.mock('../api/consultants', () => ({
 const managerUser = {
   id: 1,
   username: 'manager',
-  email: 'manager@esn.fr',
+  email: 'manager@soc.fr',
   firstName: 'M',
   lastName: 'Manager',
   phone: null,
   role: 'MANAGER',
   active: true,
-  esnId: 5,
-  esnName: 'ESN Test',
+  socId: 5,
+  socName: 'SOC Test',
   consultantId: null,
   mustChangePassword: false,
   lastLoginAt: null,
@@ -83,8 +83,8 @@ const consultantUser = {
   ...managerUser,
   id: 2,
   role: 'CONSULTANT',
-  esnId: null,
-  esnName: null,
+  socId: null,
+  socName: null,
   consultantId: 10,
 } as UserDto
 
@@ -92,7 +92,7 @@ const nf = (overrides: Partial<NoteFraisDto> = {}): NoteFraisDto => ({
   id: 1,
   consultantId: 10,
   consultantName: 'Alice Martin',
-  esnId: 5,
+  socId: 5,
   month: 8,
   year: 2026,
   status: 'DRAFT',
@@ -131,7 +131,7 @@ function renderList() {
 describe('NoteFraisList', () => {
   it('affiche le tableau, les totaux et les graphiques pour un manager', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockResolvedValue([nf()])
+    findBySocYearMock.mockResolvedValue([nf()])
     totalsByMonthMock.mockResolvedValue({ '8': 125.5 })
     totalsByCategoryMock.mockResolvedValue({ Restaurant: 125.5 })
     summariesMock.mockResolvedValue([])
@@ -139,7 +139,7 @@ describe('NoteFraisList', () => {
     renderList()
 
     expect(await screen.findByText('Alice Martin')).toBeInTheDocument()
-    expect(findByEsnYearMock).toHaveBeenCalledWith(5, 2026)
+    expect(findBySocYearMock).toHaveBeenCalledWith(5, 2026)
     expect(screen.getByText('Août 2026')).toBeInTheDocument()
     expect(screen.getByText('Brouillon')).toBeInTheDocument()
     expect(screen.getByText('Total 2026')).toBeInTheDocument()
@@ -162,7 +162,7 @@ describe('NoteFraisList', () => {
 
   it('soumet une note de frais au statut Brouillon', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockResolvedValue([nf()])
+    findBySocYearMock.mockResolvedValue([nf()])
     totalsByMonthMock.mockResolvedValue({})
     totalsByCategoryMock.mockResolvedValue({})
     summariesMock.mockResolvedValue([])
@@ -177,7 +177,7 @@ describe('NoteFraisList', () => {
 
   it('valide une note de frais soumise', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockResolvedValue([nf({ status: 'SUBMITTED' })])
+    findBySocYearMock.mockResolvedValue([nf({ status: 'SUBMITTED' })])
     totalsByMonthMock.mockResolvedValue({})
     totalsByCategoryMock.mockResolvedValue({})
     summariesMock.mockResolvedValue([])
@@ -192,7 +192,7 @@ describe('NoteFraisList', () => {
 
   it('rejette une note de frais avec le motif saisi', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockResolvedValue([nf({ status: 'SUBMITTED' })])
+    findBySocYearMock.mockResolvedValue([nf({ status: 'SUBMITTED' })])
     totalsByMonthMock.mockResolvedValue({})
     totalsByCategoryMock.mockResolvedValue({})
     summariesMock.mockResolvedValue([])
@@ -208,7 +208,7 @@ describe('NoteFraisList', () => {
 
   it('supprime une note de frais après confirmation', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockResolvedValue([nf()])
+    findBySocYearMock.mockResolvedValue([nf()])
     totalsByMonthMock.mockResolvedValue({})
     totalsByCategoryMock.mockResolvedValue({})
     summariesMock.mockResolvedValue([])
@@ -224,11 +224,11 @@ describe('NoteFraisList', () => {
 
   it('crée une note de frais depuis le formulaire', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockResolvedValue([])
+    findBySocYearMock.mockResolvedValue([])
     totalsByMonthMock.mockResolvedValue({})
     totalsByCategoryMock.mockResolvedValue({})
     summariesMock.mockResolvedValue([
-      { id: 10, fullName: 'Alice Martin', position: 'Consultante', email: 'alice@esn.fr' },
+      { id: 10, fullName: 'Alice Martin', position: 'Consultante', email: 'alice@soc.fr' },
     ])
     createMock.mockResolvedValue(nf())
 
@@ -270,7 +270,7 @@ describe('NoteFraisList', () => {
 
   it('affiche l’erreur API dans un bloc d’erreur', async () => {
     userMock.value = managerUser
-    findByEsnYearMock.mockRejectedValue(new ApiError(500, 'Erreur serveur'))
+    findBySocYearMock.mockRejectedValue(new ApiError(500, 'Erreur serveur'))
     totalsByMonthMock.mockResolvedValue({})
     totalsByCategoryMock.mockResolvedValue({})
     summariesMock.mockResolvedValue([])

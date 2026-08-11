@@ -27,7 +27,7 @@ import { Messages } from './pages/Messages'
 import { Support } from './pages/Support'
 import { Profile } from './pages/Profile'
 import { Users } from './pages/Users'
-import { EsnAdmin } from './pages/EsnAdmin'
+import { SocAdmin } from './pages/SocAdmin'
 import { Tables } from './pages/Tables'
 import { Logs } from './pages/Logs'
 import { NotFound } from './pages/NotFound'
@@ -113,7 +113,7 @@ const router = createBrowserRouter(
             { path: '/profil', element: <Profile /> },
             { path: '/change-password', element: <ChangePassword /> },
             { path: '/utilisateurs', element: <Users /> },
-            { path: '/esn', element: <EsnAdmin /> },
+            { path: '/soc', element: <SocAdmin /> },
             {
               path: '/tables',
               element: (

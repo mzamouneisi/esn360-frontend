@@ -20,21 +20,21 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler
 }
 
-let currentEsnId: number | null = null
+let currentSocId: number | null = null
 
-export function setCurrentEsnId(id: number | null): void {
-  currentEsnId = id
+export function setCurrentSocId(id: number | null): void {
+  currentSocId = id
 }
 
-export function getCurrentEsnId(): number | null {
-  return currentEsnId
+export function getCurrentSocId(): number | null {
+  return currentSocId
 }
 
 function authHeaders(): Record<string, string> {
   const token = getToken()
   const headers: Record<string, string> = {}
   if (token) headers.Authorization = `Bearer ${token}`
-  if (currentEsnId != null) headers['X-ESN-Id'] = String(currentEsnId)
+  if (currentSocId != null) headers['X-SOC-Id'] = String(currentSocId)
   return headers
 }
 

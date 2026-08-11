@@ -30,13 +30,13 @@ export interface PageResponse<T> {
   totalPages: number
 }
 
-export interface EsnLiteDto {
+export interface SocLiteDto {
   id: number
   name: string
 }
 
-export interface AddEsnPayload {
-  esnName: string
+export interface AddSocPayload {
+  socName: string
   description?: string | null
   siret?: string | null
   codeNaf?: string | null
@@ -57,8 +57,8 @@ export interface UserDto {
   phone: string | null
   role: Role
   active: boolean
-  esnId: number | null
-  esnName: string | null
+  socId: number | null
+  socName: string | null
   consultantId: number | null
   mustChangePassword: boolean
   lastLoginAt: string | null
@@ -94,7 +94,7 @@ export interface Address {
   country?: string | null
 }
 
-export interface EsnDto {
+export interface SocDto {
   id: number
   name: string
   description?: string | null
@@ -123,8 +123,8 @@ export interface PaymentDto {
   reference?: string | null
 }
 
-export interface EsnDetailDto {
-  esn: EsnDto
+export interface SocDetailDto {
+  soc: SocDto
   subscriptions: SubscriptionDto[]
   payments: PaymentDto[]
 }
@@ -143,8 +143,8 @@ export interface ConsultantDto {
   currency: string | null
   nationality: string | null
   active: boolean
-  esnId: number
-  esnName: string
+  socId: number
+  socName: string
   managerId: number | null
   managerName: string | null
   hasUserAccount: boolean
@@ -163,7 +163,7 @@ export interface ConsultantRequest {
   baseSalary?: number | null
   currency?: string | null
   nationality?: string | null
-  esnId: number
+  socId: number
   managerId?: number | null
   username?: string | null
   password?: string | null
@@ -185,29 +185,21 @@ export interface ManagerSummary {
 export interface ClientDto {
   id: number
   name: string
-  description?: string | null
-  siret?: string | null
-  codeNaf?: string | null
-  website?: string | null
   contactName: string | null
   contactEmail: string | null
   contactPhone: string | null
-  address?: Address | null
-  esn?: { id: number; name: string } | null
+  notes?: string | null
+  soc?: { id: number; name: string } | null
   active: boolean
 }
 
 export interface ClientRequest {
   name: string
-  description?: string | null
-  siret?: string | null
-  codeNaf?: string | null
-  website?: string | null
   contactName?: string | null
   contactEmail?: string | null
   contactPhone?: string | null
-  address?: Address | null
-  esnId?: number | null
+  notes?: string | null
+  socId?: number | null
   active: boolean
 }
 
@@ -216,7 +208,7 @@ export interface ProjectDto {
   name: string
   description: string | null
   client?: { id: number; name: string } | null
-  esn?: { id: number; name: string } | null
+  soc?: { id: number; name: string } | null
   startDate: string | null
   endDate: string | null
   dailyRate: number | null
@@ -228,7 +220,7 @@ export interface ProjectRequest {
   name: string
   description?: string | null
   clientId: number
-  esnId: number
+  socId: number
   startDate?: string | null
   endDate?: string | null
   dailyRate?: number | null
@@ -244,12 +236,12 @@ export interface ActivityTypeDto {
   labelAr?: string | null
   color?: string | null
   active: boolean
-  esnId: number
-  esnName: string | null
+  socId: number
+  socName: string | null
 }
 
 export interface ActivityTypeRequest {
-  esnId: number
+  socId: number
   code: string
   labelFr: string
   labelEn?: string | null
@@ -265,7 +257,7 @@ export interface ActivityDto {
   price: number
   currency: string
   type?: { id: number; code: string; labelFr: string; color?: string | null } | null
-  esn?: { id: number; name: string } | null
+  soc?: { id: number; name: string } | null
   active: boolean
 }
 
@@ -275,7 +267,7 @@ export interface ActivityRequest {
   price: number
   currency?: string | null
   typeId: number
-  esnId: number
+  socId: number
   active: boolean
 }
 
@@ -348,7 +340,7 @@ export interface NoteFraisDto {
   id: number
   consultantId: number
   consultantName: string
-  esnId: number
+  socId: number
   month: number
   year: number
   status: NoteFraisStatus
@@ -385,7 +377,7 @@ export interface HrDocumentDto {
   expiresAt: string | null
   description: string | null
   consultantId: number | null
-  esnId: number | null
+  socId: number | null
   uploadedBy: string
   createdAt: string
 }
@@ -452,11 +444,11 @@ export interface PublicHolidayDto {
 export interface DashboardOverview {
   user: string
   role: Role
-  esnId: number | null
+  socId: number | null
   unreadMessages: number
   unreadNotifications: number
   totalUsers?: number
-  totalEsns?: number
+  totalSocs?: number
   totalConsultants?: number
   activeSubscriptions?: number
   consultants?: number

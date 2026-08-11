@@ -54,14 +54,14 @@ vi.mock('../api/cras', () => ({
 const managerUser = {
   id: 1,
   username: 'manager',
-  email: 'manager@esn.fr',
+  email: 'manager@soc.fr',
   firstName: 'M',
   lastName: 'Manager',
   phone: null,
   role: 'MANAGER',
   active: true,
-  esnId: 5,
-  esnName: 'ESN Test',
+  socId: 5,
+  socName: 'SOC Test',
   consultantId: null,
   mustChangePassword: false,
   lastLoginAt: null,
@@ -71,8 +71,8 @@ const consultantUser = {
   ...managerUser,
   id: 2,
   role: 'CONSULTANT',
-  esnId: null,
-  esnName: null,
+  socId: null,
+  socName: null,
   consultantId: 10,
 } as UserDto
 
@@ -160,12 +160,12 @@ describe('CraList', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Exporter CSV' }))
     await waitFor(() =>
-      expect(exportCsvMock).toHaveBeenCalledWith({ esnId: 5, month: 8, year: 2026 }),
+      expect(exportCsvMock).toHaveBeenCalledWith({ socId: 5, month: 8, year: 2026 }),
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Exporter PDF' }))
     await waitFor(() =>
-      expect(exportPdfMock).toHaveBeenCalledWith({ esnId: 5, month: 8, year: 2026 }),
+      expect(exportPdfMock).toHaveBeenCalledWith({ socId: 5, month: 8, year: 2026 }),
     )
   })
 

@@ -56,8 +56,8 @@ export function CraDetail() {
   )
 
   const { data: activities } = useAsync(
-    () => activitiesApi.findAll(user?.esnId ? { esnId: user.esnId } : undefined),
-    [user?.esnId],
+    () => activitiesApi.findAll(user?.socId ? { socId: user.socId } : undefined),
+    [user?.socId],
   )
 
   const [days, setDays] = useState<EditableDay[]>([])

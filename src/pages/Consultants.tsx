@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { consultantsApi } from '../api/consultants'
-import { esnsApi } from '../api/esns'
+import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
 import {
@@ -31,7 +31,7 @@ interface FormState {
   baseSalary: string
   currency: string
   nationality: string
-  esnId: string
+  socId: string
   managerId: string
   username: string
   password: string
@@ -49,7 +49,7 @@ const emptyForm: FormState = {
   baseSalary: '',
   currency: 'EUR',
   nationality: '',
-  esnId: '',
+  socId: '',
   managerId: '',
   username: '',
   password: '',
@@ -76,15 +76,15 @@ export function Consultants() {
   const { data, loading, error, reload, setData } = useAsync(
     () =>
       consultantsApi.findAll({
-        esnId: isAdmin ? undefined : user?.esnId ?? undefined,
+        socId: isAdmin ? undefined : user?.socId ?? undefined,
         search: debounced || undefined,
         page,
         size,
       }),
-    [user?.esnId, isAdmin, debounced, page, size],
+    [user?.socId, isAdmin, debounced, page, size],
   )
 
-  const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
+  const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
 
   const [editing, setEditing] = useState<ConsultantDto | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -93,13 +93,13 @@ export function Consultants() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const selectedEsnId = form.esnId ? Number(form.esnId) : null
+  const selectedSocId = form.socId ? Number(form.socId) : null
   const { data: managers } = useAsync(
     () =>
-      selectedEsnId
-        ? consultantsApi.managers(selectedEsnId)
+      selectedSocId
+        ? consultantsApi.managers(selectedSocId)
         : Promise.resolve([] as ManagerSummary[]),
-    [selectedEsnId],
+    [selectedSocId],
   )
 
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -110,7 +110,7 @@ export function Consultants() {
   const managerOptions = useMemo(() => managers ?? [], [managers])
 
   function openCreate() {
-    setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') })
+    setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
@@ -129,7 +129,7 @@ export function Consultants() {
       baseSalary: c.baseSalary != null ? String(c.baseSalary) : '',
       currency: c.currency ?? 'EUR',
       nationality: c.nationality ?? '',
-      esnId: String(c.esnId ?? user?.esnId ?? ''),
+      socId: String(c.socId ?? user?.socId ?? ''),
       managerId: c.managerId != null ? String(c.managerId) : '',
       username: c.username ?? '',
       password: '',
@@ -145,7 +145,7 @@ export function Consultants() {
       setFormError('Le prénom et le nom sont obligatoires')
       return
     }
-    if (isAdmin && !form.esnId) {
+    if (isAdmin && !form.socId) {
       setFormError('Sélectionnez la société')
       return
     }
@@ -169,7 +169,7 @@ export function Consultants() {
         baseSalary: form.baseSalary ? Number(form.baseSalary) : null,
         currency: form.currency || 'EUR',
         nationality: form.nationality || null,
-        esnId: isAdmin ? Number(form.esnId) : user?.esnId ?? 0,
+        socId: isAdmin ? Number(form.socId) : user?.socId ?? 0,
         managerId: form.managerId ? Number(form.managerId) : null,
         username: creatingAccount ? form.username.trim() : null,
         password: creatingAccount ? form.password : null,
@@ -205,7 +205,7 @@ export function Consultants() {
     setImportError(null)
     setImportResult(null)
     try {
-      const result = await consultantsApi.importCsv(importFile, Number(isAdmin ? form.esnId : user?.esnId))
+      const result = await consultantsApi.importCsv(importFile, Number(isAdmin ? form.socId : user?.socId))
       setImportResult(result)
       reload()
     } catch (err) {
@@ -225,7 +225,7 @@ export function Consultants() {
         actions={
           canEdit ? (
             <>
-              <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') }) }}>
+              <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') }) }}>
                 Importer CSV
               </InlineButton>
               <Button className="w-auto" onClick={openCreate}>
@@ -440,11 +440,11 @@ export function Consultants() {
           </div>
           {isAdmin && (
             <Field label="Société">
-              <Select value={form.esnId} onChange={(e) => setForm({ ...form, esnId: e.target.value })}>
+              <Select value={form.socId} onChange={(e) => setForm({ ...form, socId: e.target.value })}>
                 <option value="">Sélectionner…</option>
-                {(esns ?? []).map((esn) => (
-                  <option key={esn.id} value={esn.id}>
-                    {esn.name}
+                {(socs ?? []).map((soc) => (
+                  <option key={soc.id} value={soc.id}>
+                    {soc.name}
                   </option>
                 ))}
               </Select>
@@ -493,11 +493,11 @@ export function Consultants() {
           </p>
           {isAdmin && (
             <Field label="Société">
-              <Select value={form.esnId} onChange={(e) => setForm({ ...form, esnId: e.target.value })}>
+              <Select value={form.socId} onChange={(e) => setForm({ ...form, socId: e.target.value })}>
                 <option value="">Sélectionner…</option>
-                {(esns ?? []).map((esn) => (
-                  <option key={esn.id} value={esn.id}>
-                    {esn.name}
+                {(socs ?? []).map((soc) => (
+                  <option key={soc.id} value={soc.id}>
+                    {soc.name}
                   </option>
                 ))}
               </Select>
