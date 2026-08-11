@@ -13,6 +13,7 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
 import { ChangePassword } from './pages/ChangePassword'
 import { Clients } from './pages/Clients'
+import { Suppliers } from './pages/Suppliers'
 import { Projects } from './pages/Projects'
 import { Missions } from './pages/Missions'
 import { Consultants } from './pages/Consultants'
@@ -60,6 +61,14 @@ const router = createBrowserRouter(
               element: (
                 <NotConsultantRoute>
                   <Clients />
+                </NotConsultantRoute>
+              ),
+            },
+            {
+              path: '/fournisseurs',
+              element: (
+                <NotConsultantRoute>
+                  <Suppliers />
                 </NotConsultantRoute>
               ),
             },

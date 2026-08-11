@@ -203,6 +203,27 @@ export interface ClientRequest {
   active: boolean
 }
 
+export interface SupplierDto {
+  id: number
+  name: string
+  contactName: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  notes?: string | null
+  soc?: { id: number; name: string } | null
+  active: boolean
+}
+
+export interface SupplierRequest {
+  name: string
+  contactName?: string | null
+  contactEmail?: string | null
+  contactPhone?: string | null
+  notes?: string | null
+  socId?: number | null
+  active: boolean
+}
+
 export interface ProjectDto {
   id: number
   name: string

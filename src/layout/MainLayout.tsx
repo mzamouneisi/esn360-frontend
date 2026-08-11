@@ -18,6 +18,7 @@ interface NavSection {
 
 const HIDDEN_FOR_CONSULTANT = new Set([
   '/clients',
+  '/fournisseurs',
   '/projets',
   '/missions',
   '/consultants',
@@ -28,6 +29,7 @@ const HIDDEN_FOR_CONSULTANT = new Set([
 const ICONS = {
   dashboard: 'M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z',
   clients: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z',
+  suppliers: 'M2 15h2v2h2v-2h4v2h2v-2h4v2h2v-2h2a2 2 0 0 0 2-2v-2l-1-5h-4V5h-2v3H5L3 9v6h-1v2Zm18-6h-2l.5 3H20v-3Z',
   projects: 'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2Z',
   missions: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-5 14H7v-2h7v2Zm3-4H7v-2h10v2Zm0-4H7V7h10v2Z',
   consultants: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z',
@@ -97,6 +99,7 @@ export function MainLayout() {
       title: 'Gestion',
       items: [
         { to: '/clients', label: 'Clients', icon: ICONS.clients },
+        { to: '/fournisseurs', label: 'Fournisseurs', icon: ICONS.suppliers },
         { to: '/projets', label: 'Projets', icon: ICONS.projects },
         { to: '/missions', label: 'Missions', icon: ICONS.missions },
         { to: '/consultants', label: 'Consultants', icon: ICONS.consultants },

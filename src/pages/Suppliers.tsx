@@ -1,0 +1,284 @@
+import { useState, type FormEvent } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { suppliersApi } from '../api/suppliers'
+import { socsApi } from '../api/socs'
+import { ApiError } from '../api/client'
+import { useAsync } from '../lib/useAsync'
+import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
+import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
+import type { SupplierDto } from '../api/types'
+
+interface FormState {
+  name: string
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  notes: string
+  socId: string
+  active: boolean
+}
+
+const emptyForm: FormState = {
+  name: '',
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  notes: '',
+  socId: '',
+  active: true,
+}
+
+export function Suppliers() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+
+  const { data, loading, error, reload, setData } = useAsync(
+    () => suppliersApi.findAll(isAdmin ? undefined : user?.socId ?? undefined),
+    [user?.socId, isAdmin],
+  )
+  const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
+
+  const [editing, setEditing] = useState<SupplierDto | null>(null)
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  function openCreate() {
+    setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') })
+    setEditing(null)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(supplier: SupplierDto) {
+    setForm({
+      name: supplier.name,
+      contactName: supplier.contactName ?? '',
+      contactEmail: supplier.contactEmail ?? '',
+      contactPhone: supplier.contactPhone ?? '',
+      notes: supplier.notes ?? '',
+      socId: String(supplier.soc?.id ?? user?.socId ?? ''),
+      active: supplier.active,
+    })
+    setEditing(supplier)
+    setFormError(null)
+    setModalOpen(true)
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) {
+      setFormError('Le nom du fournisseur est obligatoire')
+      return
+    }
+    if (isAdmin && !form.socId) {
+      setFormError('Sélectionnez la société')
+      return
+    }
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const payload = {
+        name: form.name.trim(),
+        contactName: form.contactName || null,
+        contactEmail: form.contactEmail || null,
+        contactPhone: form.contactPhone || null,
+        notes: form.notes.trim() || null,
+        socId: isAdmin ? Number(form.socId) : user?.socId ?? undefined,
+        active: form.active,
+      }
+      if (editing) {
+        await suppliersApi.update(editing.id, payload)
+      } else {
+        await suppliersApi.create(payload)
+      }
+      setModalOpen(false)
+      reload()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDelete(supplier: SupplierDto) {
+    if (!window.confirm(`Supprimer le fournisseur « ${supplier.name} » ?`)) return
+    try {
+      await suppliersApi.delete(supplier.id)
+      setData((data ?? []).filter((s) => s.id !== supplier.id))
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Fournisseurs"
+        subtitle="Gérez vos fournisseurs et vos contacts"
+        actions={
+          canEdit ? (
+            <Button className="w-auto" onClick={openCreate}>
+              + Nouveau fournisseur
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {error && <ErrorBlock message={error} />}
+      {loading && <LoadingBlock />}
+      {!loading && data && (
+        <Table
+          rowKey={(s) => s.id}
+          onRowClick={canEdit ? openEdit : undefined}
+          rows={data}
+          columns={[
+            {
+              key: 'name',
+              label: 'Fournisseur',
+              render: (s) => <span className="font-medium text-gray-900">{s.name}</span>,
+            },
+            {
+              key: 'contact',
+              label: 'Contact',
+              render: (s) => (
+                <div>
+                  {s.contactName ? <p className="text-gray-900">{s.contactName}</p> : null}
+                  {s.contactEmail && <p className="text-xs text-gray-500">{s.contactEmail}</p>}
+                  {s.contactPhone && <p className="text-xs text-gray-500">{s.contactPhone}</p>}
+                  {!s.contactName && !s.contactEmail && <span className="text-gray-400">—</span>}
+                </div>
+              ),
+            },
+            {
+              key: 'soc',
+              label: 'Société',
+              render: (s) => (isAdmin ? <span>{s.soc?.name ?? '—'}</span> : <span>—</span>),
+            },
+            {
+              key: 'notes',
+              label: 'Notes',
+              render: (s) => (
+                <span className="line-clamp-2 max-w-56 text-xs text-gray-500">{s.notes ?? '—'}</span>
+              ),
+            },
+            {
+              key: 'active',
+              label: 'Statut',
+              render: (s) => (
+                <Badge kind={s.active ? 'success' : 'muted'}>{s.active ? 'Actif' : 'Inactif'}</Badge>
+              ),
+            },
+            {
+              key: 'actions',
+              label: '',
+              render: (s) =>
+                canEdit ? (
+                  <div className="flex justify-end gap-1">
+                    <InlineButton onClick={(e) => { e.stopPropagation(); openEdit(s) }}>
+                      Modifier
+                    </InlineButton>
+                    <InlineButton
+                      className="text-red-600 hover:bg-red-50"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(s) }}
+                    >
+                      Supprimer
+                    </InlineButton>
+                  </div>
+                ) : (
+                  <></>
+                ),
+            },
+          ]}
+        />
+      )}
+      {!loading && data?.length === 0 && (
+        <EmptyState
+          title="Aucun fournisseur"
+          description="Ajoutez votre premier fournisseur pour commencer."
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? `Modifier ${editing.name}` : 'Nouveau fournisseur'}
+        footer={
+          <>
+            <InlineButton onClick={() => setModalOpen(false)}>Annuler</InlineButton>
+            <Button className="w-auto" onClick={handleSubmit as never} disabled={submitting}>
+              {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+              {editing ? 'Enregistrer' : 'Créer'}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {formError}
+            </div>
+          )}
+          <Field label="Nom du fournisseur *">
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          </Field>
+          <Field label="Notes (infos spécifiques pour votre société)">
+            <Textarea
+              rows={2}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Conditions particulières, interlocuteurs, remarques…"
+            />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Contact">
+              <Input
+                value={form.contactName}
+                onChange={(e) => setForm({ ...form, contactName: e.target.value })}
+              />
+            </Field>
+            <Field label="Téléphone">
+              <Input
+                value={form.contactPhone}
+                onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Field label="E-mail du contact">
+            <Input
+              type="email"
+              value={form.contactEmail}
+              onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+            />
+          </Field>
+          {isAdmin && (
+            <Field label="Société">
+              <Select
+                value={form.socId}
+                onChange={(e) => setForm({ ...form, socId: e.target.value })}
+              >
+                <option value="">Sélectionner…</option>
+                {(socs ?? []).map((soc) => (
+                  <option key={soc.id} value={soc.id}>
+                    {soc.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            />
+            Fournisseur actif
+          </label>
+        </form>
+      </Modal>
+    </div>
+  )
+}
