@@ -37,7 +37,7 @@ const emptyForm: FormState = {
 export function Projects() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
     () => projectsApi.findAll(isAdmin ? undefined : { esnId: user?.esnId ?? undefined }),
@@ -90,7 +90,7 @@ export function Projects() {
       return
     }
     if (isAdmin && !form.esnId) {
-      setFormError('Sélectionnez la société (ESN)')
+      setFormError('Sélectionnez la société')
       return
     }
     setSubmitting(true)
@@ -188,7 +188,7 @@ export function Projects() {
             },
             {
               key: 'esn',
-              label: 'ESN',
+              label: 'Société',
               render: (p) => (isAdmin ? <span>{p.esn?.name ?? '—'}</span> : <span>—</span>),
             },
             {
@@ -267,7 +267,7 @@ export function Projects() {
               </Select>
             </Field>
             {isAdmin && (
-              <Field label="Société (ESN)">
+              <Field label="Société">
                 <Select
                   value={form.esnId}
                   onChange={(e) => setForm({ ...form, esnId: e.target.value })}

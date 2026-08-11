@@ -16,10 +16,10 @@ export function EsnSelector() {
         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         aria-haspopup="listbox"
         aria-expanded={open}
-        title="ESN active"
+        title="Société active"
       >
         <span className="max-w-48 truncate">
-          {selectedEsn?.name ?? (esns.length > 0 ? 'Choisir une ESN' : 'Espace de travail')}
+          {selectedEsn?.name ?? (esns.length > 0 ? 'Choisir une société' : 'Espace de travail')}
         </span>
         <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path
@@ -37,9 +37,9 @@ export function EsnSelector() {
             {loading && esns.length === 0 ? (
               <p className="px-3 py-2 text-sm text-gray-500">Chargement…</p>
             ) : esns.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-gray-500">Aucune ESN associée</p>
+              <p className="px-3 py-2 text-sm text-gray-500">Aucune société associée</p>
             ) : (
-              <ul role="listbox" aria-label="ESN active">
+              <ul role="listbox" aria-label="Société active">
                 {esns.map((esn) => (
                   <li key={esn.id}>
                     <button
@@ -83,7 +83,7 @@ export function EsnSelector() {
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-brand-600 transition hover:bg-brand-50"
                 >
                   <span className="text-base leading-none">＋</span>
-                  Inscrire une ESN
+                  Inscrire une société
                 </button>
               </div>
             )}
@@ -133,7 +133,7 @@ function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!name.trim()) {
-      setError("Le nom de l'ESN est obligatoire")
+      setError("Le nom de la société est obligatoire")
       return
     }
     setSaving(true)
@@ -153,7 +153,7 @@ function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       })
       close()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'inscription de l'ESN")
+      setError(err instanceof Error ? err.message : "Erreur lors de l'inscription de la société")
     } finally {
       setSaving(false)
     }
@@ -162,7 +162,7 @@ function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   return (
     <Modal
       open={open}
-      title="Inscrire une nouvelle ESN"
+      title="Inscrire une nouvelle société"
       onClose={close}
       size="lg"
       footer={
@@ -171,7 +171,7 @@ function AddEsnModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             Annuler
           </Button>
           <Button type="submit" form="add-esn-form" disabled={saving} className="!w-auto">
-            {saving ? 'Enregistrement…' : "Inscrire l'ESN"}
+            {saving ? 'Enregistrement…' : "Inscrire la société"}
           </Button>
         </>
       }

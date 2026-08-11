@@ -16,7 +16,7 @@ import {
 } from '../components/data'
 import { formatDate, formatMoney } from '../lib/format'
 import { useAsync } from '../lib/useAsync'
-import type { ConsultantDto, ConsultantSummary } from '../api/types'
+import type { ConsultantDto, ManagerSummary } from '../api/types'
 import { useCallback, useEffect } from 'react'
 
 interface FormState {
@@ -58,7 +58,7 @@ const emptyForm: FormState = {
 export function Consultants() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -84,11 +84,6 @@ export function Consultants() {
     [user?.esnId, isAdmin, debounced, page, size],
   )
 
-  const { data: summaries } = useAsync(
-    () => (user?.esnId ? consultantsApi.summaries(user.esnId) : Promise.resolve([] as ConsultantSummary[])),
-    [user?.esnId],
-  )
-
   const { data: esns } = useAsync(() => (isAdmin ? esnsApi.findAll() : Promise.resolve([])), [isAdmin])
 
   const [editing, setEditing] = useState<ConsultantDto | null>(null)
@@ -98,15 +93,21 @@ export function Consultants() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  const selectedEsnId = form.esnId ? Number(form.esnId) : null
+  const { data: managers } = useAsync(
+    () =>
+      selectedEsnId
+        ? consultantsApi.managers(selectedEsnId)
+        : Promise.resolve([] as ManagerSummary[]),
+    [selectedEsnId],
+  )
+
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importResult, setImportResult] = useState<{ imported: number; errors: number; errorLines: string[] } | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
 
-  const managerOptions = useMemo(
-    () => (summaries ?? []).filter((s) => s.id !== editing?.id),
-    [summaries, editing],
-  )
+  const managerOptions = useMemo(() => managers ?? [], [managers])
 
   function openCreate() {
     setForm({ ...emptyForm, esnId: isAdmin ? '' : String(user?.esnId ?? '') })
@@ -145,7 +146,7 @@ export function Consultants() {
       return
     }
     if (isAdmin && !form.esnId) {
-      setFormError('Sélectionnez la société (ESN)')
+      setFormError('Sélectionnez la société')
       return
     }
     const creatingAccount = !editing && !!form.username.trim()
@@ -438,7 +439,7 @@ export function Consultants() {
             </Field>
           </div>
           {isAdmin && (
-            <Field label="Société (ESN)">
+            <Field label="Société">
               <Select value={form.esnId} onChange={(e) => setForm({ ...form, esnId: e.target.value })}>
                 <option value="">Sélectionner…</option>
                 {(esns ?? []).map((esn) => (
@@ -491,7 +492,7 @@ export function Consultants() {
             Format attendu : <code className="rounded bg-gray-100 px-1">prénom,nom,email,téléphone,poste,dateEmbauche(AAAA-MM-JJ),dateNaissance,NSS,salaire,devise,nationalité</code>
           </p>
           {isAdmin && (
-            <Field label="Société (ESN)">
+            <Field label="Société">
               <Select value={form.esnId} onChange={(e) => setForm({ ...form, esnId: e.target.value })}>
                 <option value="">Sélectionner…</option>
                 {(esns ?? []).map((esn) => (

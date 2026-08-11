@@ -37,7 +37,7 @@ export function Login() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-xl font-extrabold text-white">
             E
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">ESN360</h1>
+          <h1 className="text-2xl font-bold text-gray-900">SOC360</h1>
           <p className="mt-1 text-sm text-gray-500">Connectez-vous à votre espace</p>
         </div>
 
@@ -95,12 +95,12 @@ export function Login() {
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">
-          Votre ESN n'a pas encore de compte ?{' '}
+          Votre société n'a pas encore de compte ?{' '}
           <Link
             to="/inscription"
             className="font-medium text-brand-600 hover:text-brand-700"
           >
-            Inscrire mon ESN
+            Inscrire ma société
           </Link>
         </p>
       </Card>

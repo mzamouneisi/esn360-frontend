@@ -12,7 +12,7 @@ import type { HrDocumentDto } from '../api/types'
 export function Documents() {
   const { user } = useAuth()
   const isConsultant = user?.role === 'CONSULTANT'
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
     () =>

@@ -70,7 +70,7 @@ export function initials(firstName?: string, lastName?: string): string {
 
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: 'Administrateur',
-  RESPONSIBLE_ESN: 'Responsable ESN',
+  RESPONSIBLE_SOC: 'Responsable société',
   MANAGER: 'Manager',
   CONSULTANT: 'Consultant',
 }

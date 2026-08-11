@@ -105,7 +105,7 @@ export function Facturation() {
       {isAdmin && (
         <Card className="mb-6 p-4">
           <label className="flex items-center gap-2 text-sm text-gray-600">
-            Société (ESN) :
+            Société :
             <Select
               className="w-64"
               value={selectedEsn ?? ''}

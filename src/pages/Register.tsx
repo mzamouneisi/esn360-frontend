@@ -81,7 +81,7 @@ export function Register() {
     <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 p-6">
       <Card className="w-full max-w-lg p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Inscrire votre ESN</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Inscrire votre société</h1>
           <p className="mt-1 text-sm text-gray-500">
             Créez le compte administrateur de votre société
           </p>
@@ -95,7 +95,7 @@ export function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Nom de l'ESN">
+            <Field label="Nom de la société">
               <Input
                 type="text"
                 value={esnName}

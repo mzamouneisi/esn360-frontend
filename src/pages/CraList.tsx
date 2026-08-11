@@ -24,7 +24,7 @@ export function CraList() {
 
   const isConsultant = user?.role === 'CONSULTANT'
   const canValidate =
-    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN' || user?.role === 'MANAGER'
+    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
 
   const ownCras = useAsync(
     () =>

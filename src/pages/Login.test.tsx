@@ -28,7 +28,7 @@ function renderLogin() {
 describe('Login', () => {
   it('affiche le formulaire de connexion', () => {
     renderLogin()
-    expect(screen.getByText('ESN360')).toBeInTheDocument()
+    expect(screen.getByText('SOC360')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('votre.identifiant')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument()

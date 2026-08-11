@@ -108,7 +108,7 @@ export function EsnProvider({ children }: { children: ReactNode }) {
       refreshEsns,
       selectEsn,
       addEsn,
-      canAddEsn: user?.role === 'RESPONSIBLE_ESN',
+      canAddEsn: user?.role === 'RESPONSIBLE_SOC',
     }),
     [esns, selectedEsnId, selectedEsn, loading, refreshEsns, selectEsn, addEsn, user?.role],
   )

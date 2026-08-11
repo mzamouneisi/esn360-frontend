@@ -1,32 +1,58 @@
-# React + TypeScript + Vite
+# SOC360 — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Interface web de **SOC360** (anciennement ESN360), une application de gestion pour les sociétés de services du numérique : consultants, CRA, notes de frais, facturation, fiches de paie, documents RH, projets et clients.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** + **TypeScript** + **Vite 8**
+- Routage : `react-router-dom` 7
+- Styles : **Tailwind CSS 4** (via `@tailwindcss/vite`)
+- Tests : **Vitest** + **Testing Library** (happy-dom / jsdom)
+- Lint : **Oxlint**
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | Serveur de dev Vite (proxy `/api` → `localhost:8080`) |
+| `npm run lint` | Oxlint |
+| `npm test` | Tests Vitest (une fois) |
+| `npm run test:watch` | Tests Vitest (watch) |
+| `npm run build` | Build de dev (`tsc -b && vite build`) |
+| `npm run build:pages` | Build GitHub Pages dev → dossier `docs/` |
+| `npm run build:pages:prod` | Build GitHub Pages prod → dossier `dist-prod/` |
+| `npm run preview` | Prévisualisation du build |
 
-## Expanding the Oxlint configuration
+## Architecture
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- `src/api/` — appels HTTP vers le backend (`client.ts` gère le token JWT et le header `X-ESN-Id`, `types.ts` contient les DTO).
+- `src/auth/` — contexte d'authentification et routes protégées :
+  - `ProtectedRoute` (connecté), `AdminRoute` (ADMIN), `PublicOnlyRoute` (non connecté),
+  - `PasswordGuard` (changement de mot de passe obligatoire),
+  - `NotConsultantRoute` (bloque l'accès aux écrans de gestion pour les CONSULTANT).
+- `src/esn/` — contexte et sélecteur de société : l'utilisateur (ADMIN, RESPONSIBLE_SOC, MANAGER) travaille sur une **société active** transmise au backend via `X-ESN-Id`.
+- `src/layout/MainLayout.tsx` — navigation par rôle (les écrans de gestion sont masqués pour CONSULTANT).
+- `src/pages/` — écrans : Dashboard, Clients, Projets, Missions, Consultants, Activités, CRA, Notes de frais, Facturation, Fiches de paie, Documents, Messages, Administration.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Rôles
+
+| Rôle | Périmètre |
+|---|---|
+| `ADMIN` | Super-administrateur (toutes sociétés, administration) |
+| `RESPONSIBLE_SOC` | Gère sa/ses société(s), peut en inscrire de nouvelles |
+| `MANAGER` | Gère les consultants et les activités de sa société |
+| `CONSULTANT` | Saisie des CRA, notes de frais, documents |
+
+## Déploiement
+
+Voir [DOC_DEPLOY_FRONT_TO_GH_PAGES.md](DOC_DEPLOY_FRONT_TO_GH_PAGES.md) — deux sites GitHub Pages (dev et prod), chacun relié à son backend Azure :
+
+```bash
+./deploy_front_to_gh_pages.sh dev     # site dev (par défaut)
+./deploy_front_to_gh_pages.sh prod    # site prod
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Environnement
+
+- `.env.production` — build dev : base `/esn360-frontend/` + backend Azure dev
+- `.env.production-prod` — build prod : base `/esn360-frontend-prod/` + backend Azure prod

@@ -114,7 +114,7 @@ describe('initials', () => {
 
 describe('libellés', () => {
   it('contient tous les rôles', () => {
-    expect(Object.keys(ROLE_LABELS)).toEqual(['ADMIN', 'RESPONSIBLE_ESN', 'MANAGER', 'CONSULTANT'])
+    expect(Object.keys(ROLE_LABELS)).toEqual(['ADMIN', 'RESPONSIBLE_SOC', 'MANAGER', 'CONSULTANT'])
   })
 
   it('couvre tous les statuts de CRA et notes de frais', () => {

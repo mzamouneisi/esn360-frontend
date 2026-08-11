@@ -3,6 +3,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AdminRoute } from './auth/AdminRoute'
 import { PublicOnlyRoute } from './auth/PublicOnlyRoute'
 import { PasswordGuard } from './auth/PasswordGuard'
+import { NotConsultantRoute } from './auth/NotConsultantRoute'
 import { MainLayout } from './layout/MainLayout'
 import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
@@ -54,15 +55,57 @@ const router = createBrowserRouter(
           ),
           children: [
             { path: '/', element: <Dashboard /> },
-            { path: '/clients', element: <Clients /> },
-            { path: '/projets', element: <Projects /> },
-            { path: '/missions', element: <Missions /> },
-            { path: '/consultants', element: <Consultants /> },
-            { path: '/activites', element: <Activities /> },
+            {
+              path: '/clients',
+              element: (
+                <NotConsultantRoute>
+                  <Clients />
+                </NotConsultantRoute>
+              ),
+            },
+            {
+              path: '/projets',
+              element: (
+                <NotConsultantRoute>
+                  <Projects />
+                </NotConsultantRoute>
+              ),
+            },
+            {
+              path: '/missions',
+              element: (
+                <NotConsultantRoute>
+                  <Missions />
+                </NotConsultantRoute>
+              ),
+            },
+            {
+              path: '/consultants',
+              element: (
+                <NotConsultantRoute>
+                  <Consultants />
+                </NotConsultantRoute>
+              ),
+            },
+            {
+              path: '/activites',
+              element: (
+                <NotConsultantRoute>
+                  <Activities />
+                </NotConsultantRoute>
+              ),
+            },
             { path: '/cras', element: <CraList /> },
             { path: '/cras/:id', element: <CraDetail /> },
             { path: '/notes-frais', element: <NoteFraisList /> },
-            { path: '/facturation', element: <Facturation /> },
+            {
+              path: '/facturation',
+              element: (
+                <NotConsultantRoute>
+                  <Facturation />
+                </NotConsultantRoute>
+              ),
+            },
             { path: '/fiches-paie', element: <FichePaie /> },
             { path: '/documents', element: <Documents /> },
             { path: '/messages', element: <Messages /> },

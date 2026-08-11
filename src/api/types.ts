@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'RESPONSIBLE_ESN' | 'MANAGER' | 'CONSULTANT'
+export type Role = 'ADMIN' | 'RESPONSIBLE_SOC' | 'MANAGER' | 'CONSULTANT'
 
 export type CraStatus = 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED'
 
@@ -176,23 +176,37 @@ export interface ConsultantSummary {
   email: string
 }
 
+export interface ManagerSummary {
+  id: number
+  fullName: string
+  position: string
+}
+
 export interface ClientDto {
   id: number
   name: string
+  description?: string | null
+  siret?: string | null
+  codeNaf?: string | null
+  website?: string | null
   contactName: string | null
   contactEmail: string | null
   contactPhone: string | null
-  address: string | null
+  address?: Address | null
   esn?: { id: number; name: string } | null
   active: boolean
 }
 
 export interface ClientRequest {
   name: string
+  description?: string | null
+  siret?: string | null
+  codeNaf?: string | null
+  website?: string | null
   contactName?: string | null
   contactEmail?: string | null
   contactPhone?: string | null
-  address?: string | null
+  address?: Address | null
   esnId?: number | null
   active: boolean
 }
@@ -224,6 +238,18 @@ export interface ProjectRequest {
 
 export interface ActivityTypeDto {
   id: number
+  code: string
+  labelFr: string
+  labelEn?: string | null
+  labelAr?: string | null
+  color?: string | null
+  active: boolean
+  esnId: number
+  esnName: string | null
+}
+
+export interface ActivityTypeRequest {
+  esnId: number
   code: string
   labelFr: string
   labelEn?: string | null

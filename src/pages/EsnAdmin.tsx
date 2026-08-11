@@ -16,13 +16,13 @@ export function EsnAdmin() {
 
   return (
     <div>
-      <PageHeader title="Sociétés (ESN)" subtitle="Abonnements et paiements des sociétés" />
+      <PageHeader title="Sociétés" subtitle="Abonnements et paiements des sociétés" />
 
       {error && <ErrorBlock message={error} />}
       {loading && <LoadingBlock />}
 
       {!loading && esns && esns.length === 0 && (
-        <EmptyState title="Aucune société" description="Aucune ESN enregistrée sur la plateforme." />
+        <EmptyState title="Aucune société" description="Aucune société enregistrée sur la plateforme." />
       )}
 
       {!loading && esns && esns.length > 0 && (

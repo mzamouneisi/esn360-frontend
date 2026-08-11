@@ -77,7 +77,7 @@ export function CraDetail() {
 
   const editable = cra.status === 'DRAFT' || cra.status === 'REJECTED'
   const canValidate =
-    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_ESN' || user?.role === 'MANAGER'
+    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
 
   function updateDay(index: number, patch: Partial<EditableDay>) {
     setDays((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)))

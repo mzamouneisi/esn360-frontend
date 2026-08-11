@@ -49,13 +49,13 @@ export function Dashboard() {
           {user.role === 'ADMIN' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Utilisateurs" value={data.totalUsers ?? 0} to="/utilisateurs" />
-              <StatCard label="Sociétés (ESN)" value={data.totalEsns ?? 0} to="/esn" />
+              <StatCard label="Sociétés" value={data.totalEsns ?? 0} to="/esn" />
               <StatCard label="Consultants" value={data.totalConsultants ?? 0} to="/consultants" />
               <StatCard label="Abonnements actifs" value={data.activeSubscriptions ?? 0} to="/esn" />
             </div>
           )}
 
-          {(user.role === 'RESPONSIBLE_ESN' || user.role === 'MANAGER') && (
+          {(user.role === 'RESPONSIBLE_SOC' || user.role === 'MANAGER') && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Consultants" value={data.consultants ?? 0} to="/consultants" />
               <StatCard label="CRA en attente" value={data.pendingCras ?? 0} to="/cras" />
@@ -148,7 +148,7 @@ export function Dashboard() {
           <InfoRow label="Nom" value={`${user.firstName} ${user.lastName}`} />
           <InfoRow label="E-mail" value={user.email} />
           <InfoRow label="Rôle" value={ROLE_LABELS[user.role]} />
-          <InfoRow label="ESN" value={activeEsnName ?? '—'} />
+          <InfoRow label="Société" value={activeEsnName ?? '—'} />
           <InfoRow label="Téléphone" value={user.phone ?? '—'} />
           <InfoRow label="Identifiant" value={user.username} />
         </dl>

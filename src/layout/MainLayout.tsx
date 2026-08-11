@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { NotificationBell } from './NotificationBell'
 import { EsnSelector } from '../esn/EsnSelector'
 import { ROLE_LABELS, initials } from '../lib/format'
+import type { Role } from '../api/types'
 
 interface NavItem {
   to: string
@@ -14,6 +15,15 @@ interface NavSection {
   title?: string
   items: NavItem[]
 }
+
+const HIDDEN_FOR_CONSULTANT = new Set([
+  '/clients',
+  '/projets',
+  '/missions',
+  '/consultants',
+  '/activites',
+  '/facturation',
+])
 
 const ICONS = {
   dashboard: 'M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z',
@@ -36,7 +46,11 @@ const ICONS = {
   profile: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z',
 }
 
-function NavSection({ section }: { section: NavSection }) {
+function NavSection({ section, role }: { section: NavSection; role: Role }) {
+  const items =
+    role === 'CONSULTANT' ? section.items.filter((item) => !HIDDEN_FOR_CONSULTANT.has(item.to)) : section.items
+  if (items.length === 0) return null
+
   return (
     <div>
       {section.title && (
@@ -45,7 +59,7 @@ function NavSection({ section }: { section: NavSection }) {
         </p>
       )}
       <div className="space-y-0.5">
-        {section.items.map((item) => (
+        {items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -118,7 +132,7 @@ export function MainLayout() {
       title: 'Administration',
       items: [
         { to: '/utilisateurs', label: 'Utilisateurs', icon: ICONS.users },
-        { to: '/esn', label: 'Sociétés (ESN)', icon: ICONS.esn },
+        { to: '/esn', label: 'Sociétés', icon: ICONS.esn },
         { to: '/tables', label: 'Base de données', icon: ICONS.tables },
         { to: '/logs', label: 'Logs du serveur', icon: ICONS.logs },
       ],
@@ -132,12 +146,12 @@ export function MainLayout() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-extrabold">
             E
           </span>
-          ESN360
+          SOC360
         </div>
 
         <nav className="flex-1 space-y-0.5 px-3 pb-4">
           {sections.map((section, i) => (
-            <NavSection key={i} section={section} />
+            <NavSection key={i} section={section} role={user.role} />
           ))}
         </nav>
 
