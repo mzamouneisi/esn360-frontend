@@ -2,15 +2,24 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useSoc } from '../soc/SocContext'
 import { authApi } from '../api/auth'
+import { socsApi, type SocDependency } from '../api/socs'
+import type { SocDto } from '../api/types'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, Input, Spinner } from '../components/ui'
+import { Button, Card, Field, Input, Spinner, Textarea } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
 import { ROLE_LABELS, formatDateTime } from '../lib/format'
 
 export function Profile() {
   const { user, refreshMe } = useAuth()
   const { socs } = useSoc()
+  const [editingSoc, setEditingSoc] = useState<SocDto | null>(null)
+  const [socSaving, setSocSaving] = useState(false)
+  const [socError, setSocError] = useState<string | null>(null)
+  const [socMessage, setSocMessage] = useState<string | null>(null)
+  const [deletingSoc, setDeletingSoc] = useState<{ id: number; name: string } | null>(null)
+  const [dependencies, setDependencies] = useState<SocDependency[]>([])
+  const [dependencyLoading, setDependencyLoading] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -52,6 +61,69 @@ export function Profile() {
     }
   }
 
+  async function editSoc(id: number) {
+    setSocError(null)
+    setSocMessage(null)
+    try {
+      setEditingSoc(await socsApi.getById(id).then((detail) => detail.soc))
+    } catch (err) {
+      setSocError(err instanceof ApiError ? err.message : 'Impossible de charger la société')
+    }
+  }
+
+  async function saveSoc() {
+    if (!editingSoc) return
+    setSocSaving(true)
+    setSocError(null)
+    setSocMessage(null)
+    try {
+      const saved = await socsApi.update(editingSoc.id, editingSoc)
+      setEditingSoc(saved)
+      setSocMessage('Société mise à jour.')
+    } catch (err) {
+      setSocError(err instanceof ApiError ? err.message : 'Impossible de modifier la société')
+    } finally {
+      setSocSaving(false)
+    }
+  }
+
+  async function deleteSoc(id: number, name: string) {
+    if (!window.confirm(`Supprimer la société « ${name} » ?`)) return
+    setSocError(null)
+    setSocMessage(null)
+    try {
+      setDependencyLoading(true)
+      const linked = await socsApi.dependencies(id)
+      if (linked.length > 0) {
+        setDeletingSoc({ id, name })
+        setDependencies(linked)
+        return
+      }
+      await socsApi.remove(id)
+      window.location.reload()
+    } catch (err) {
+      setSocError(err instanceof ApiError ? err.message : 'Impossible de supprimer la société')
+    } finally {
+      setDependencyLoading(false)
+    }
+  }
+
+  async function deleteDependency(item: SocDependency) {
+    if (!deletingSoc || !window.confirm(`Supprimer « ${item.label} » ?`)) return
+    try {
+      await socsApi.removeDependency(deletingSoc.id, item.type, item.id)
+      const remaining = await socsApi.dependencies(deletingSoc.id)
+      setDependencies(remaining)
+      if (remaining.length === 0) {
+        await socsApi.remove(deletingSoc.id)
+        setDeletingSoc(null)
+        window.location.reload()
+      }
+    } catch (err) {
+      setSocError(err instanceof ApiError ? err.message : 'Impossible de supprimer cet objet')
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Mon profil" subtitle="Informations personnelles, mot de passe et connexions" />
@@ -90,9 +162,19 @@ export function Profile() {
                 {socs.length > 0 ? (
                   <ul className="space-y-1">
                     {socs.map((e) => (
-                      <li key={e.id} className="flex items-center gap-2">
+                      <li key={e.id} className="flex flex-wrap items-center gap-2">
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
-                        {e.name}
+                        <span>{e.name}</span>
+                        {user.role === 'RESPONSIBLE_SOC' && (
+                          <span className="ml-auto flex gap-2">
+                            <Button type="button" aria-label={`Modifier ${e.name}`} title="Modifier" className="!w-auto !bg-gray-100 !px-2 !py-1 !text-xs !text-gray-700" onClick={() => void editSoc(e.id)}>
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
+                            </Button>
+                            <Button type="button" aria-label={`Supprimer ${e.name}`} title="Supprimer" className="!w-auto !bg-red-600 !px-2 !py-1 !text-xs hover:!bg-red-700" onClick={() => void deleteSoc(e.id, e.name)}>
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="m19 6-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>
+                            </Button>
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -102,6 +184,39 @@ export function Profile() {
               </dd>
             </div>
           </dl>
+          {user.role === 'RESPONSIBLE_SOC' && editingSoc && (
+            <div className="mt-4 grid grid-cols-1 gap-4 rounded-lg border border-brand-100 bg-brand-50/40 p-4 sm:grid-cols-2">
+              <Field label="Nom de la société"><Input value={editingSoc.name} onChange={(e) => setEditingSoc({ ...editingSoc, name: e.target.value })} /></Field>
+              <Field label="SIRET"><Input value={editingSoc.siret ?? ''} onChange={(e) => setEditingSoc({ ...editingSoc, siret: e.target.value })} /></Field>
+              <Field label="Description"><Textarea rows={2} value={editingSoc.description ?? ''} onChange={(e) => setEditingSoc({ ...editingSoc, description: e.target.value })} /></Field>
+              <Field label="Informations web"><Textarea rows={2} value={editingSoc.infosWeb ?? ''} onChange={(e) => setEditingSoc({ ...editingSoc, infosWeb: e.target.value })} /></Field>
+              <Field label="Site web"><Input type="url" value={editingSoc.website ?? ''} onChange={(e) => setEditingSoc({ ...editingSoc, website: e.target.value })} /></Field>
+              <Field label="Gérant"><Input value={editingSoc.gerant ?? ''} onChange={(e) => setEditingSoc({ ...editingSoc, gerant: e.target.value })} /></Field>
+              <div className="flex gap-2 sm:col-span-2">
+                <Button type="button" className="!w-auto" onClick={() => void saveSoc()} disabled={socSaving}>{socSaving ? <Spinner className="border-white border-t-transparent" /> : null}Enregistrer</Button>
+                <Button type="button" className="!w-auto !bg-gray-100 !text-gray-700" onClick={() => setEditingSoc(null)}>Annuler</Button>
+              </div>
+            </div>
+          )}
+          {user.role === 'RESPONSIBLE_SOC' && socError && <div className="mt-4"><ErrorBlock message={socError} /></div>}
+          {user.role === 'RESPONSIBLE_SOC' && socMessage && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{socMessage}</div>}
+          {deletingSoc && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+                <h3 className="text-lg font-semibold text-gray-900">Objets liés à {deletingSoc.name}</h3>
+                <p className="mt-1 text-sm text-gray-500">Supprimez chaque objet avant de supprimer la société.</p>
+                <div className="mt-4 space-y-2">
+                  {dependencies.map((item) => (
+                    <div key={`${item.type}-${item.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2">
+                      <span className="text-sm text-gray-700">{item.label} <span className="text-xs text-gray-400">({item.type})</span></span>
+                      <Button type="button" disabled={dependencyLoading} className="!w-auto !bg-red-600 !px-2 !py-1 !text-xs hover:!bg-red-700" onClick={() => void deleteDependency(item)}>Supprimer</Button>
+                    </div>
+                  ))}
+                </div>
+                <Button type="button" className="mt-4 !w-auto !bg-gray-100 !text-gray-700" onClick={() => setDeletingSoc(null)}>Annuler</Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card className="p-6">

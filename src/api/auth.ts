@@ -16,7 +16,20 @@ export interface LoginPayload {
 
 export interface RegisterSocPayload {
   socName: string
+  description?: string
   siret?: string
+  infosWeb?: string
+  gerant?: string
+  codeNaf?: string
+  urssaf?: string
+  website?: string
+  street?: string
+  zipCode?: string
+  city?: string
+  country?: string
+  categorieEntreprise?: string
+  dateCreation?: string
+  dateFermeture?: string
   adminFirstName: string
   adminLastName: string
   username: string
@@ -24,10 +37,28 @@ export interface RegisterSocPayload {
   password: string
 }
 
+export interface CompanyLookup {
+  name: string | null
+  infosWeb: string | null
+  siret: string | null
+  codeNaf: string | null
+  gerant: string | null
+  categorieEntreprise: string | null
+  dateCreation: string | null
+  dateFermeture: string | null
+  website: string | null
+  street: string | null
+  zipCode: string | null
+  city: string | null
+  country: string | null
+}
+
 export const authApi = {
   login: (payload: LoginPayload) => api.post<AuthResponse>('/auth/login', payload),
   registerSoc: (payload: RegisterSocPayload) =>
     api.post<EmailSentResponse>('/auth/register-soc', payload),
+  searchSoc: (name?: string, siret?: string) =>
+    api.get<CompanyLookup[]>('/auth/search-soc', { name, siret }),
   verifyEmail: (token: string) =>
     api.post<AuthResponse>('/auth/verify-email', { token }),
   resendVerification: (email: string) =>

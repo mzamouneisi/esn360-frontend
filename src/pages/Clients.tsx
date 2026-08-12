@@ -15,6 +15,7 @@ interface FormState {
   contactPhone: string
   notes: string
   socId: string
+  socParentId: string
   active: boolean
 }
 
@@ -25,6 +26,7 @@ const emptyForm: FormState = {
   contactPhone: '',
   notes: '',
   socId: '',
+  socParentId: '',
   active: true,
 }
 
@@ -60,6 +62,7 @@ export function Clients() {
       contactPhone: client.contactPhone ?? '',
       notes: client.notes ?? '',
       socId: String(client.soc?.id ?? user?.socId ?? ''),
+      socParentId: String(client.socParent?.id ?? ''),
       active: client.active,
     })
     setEditing(client)
@@ -87,6 +90,7 @@ export function Clients() {
         contactPhone: form.contactPhone || null,
         notes: form.notes.trim() || null,
         socId: isAdmin ? Number(form.socId) : user?.socId ?? undefined,
+        socParentId: form.socParentId ? Number(form.socParentId) : null,
         active: form.active,
       }
       if (editing) {
@@ -156,6 +160,11 @@ export function Clients() {
               key: 'soc',
               label: 'Société',
               render: (c) => (isAdmin ? <span>{c.soc?.name ?? '—'}</span> : <span>—</span>),
+            },
+            {
+              key: 'socParent',
+              label: 'Société parent',
+              render: (c) => (isAdmin ? <span>{c.socParent?.name ?? '—'}</span> : <span>—</span>),
             },
             {
               key: 'notes',
@@ -254,19 +263,20 @@ export function Clients() {
             />
           </Field>
           {isAdmin && (
-            <Field label="Société">
-              <Select
-                value={form.socId}
-                onChange={(e) => setForm({ ...form, socId: e.target.value })}
-              >
-                <option value="">Sélectionner…</option>
-                {(socs ?? []).map((soc) => (
-                  <option key={soc.id} value={soc.id}>
-                    {soc.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Société">
+                <Select value={form.socId} onChange={(e) => setForm({ ...form, socId: e.target.value })}>
+                  <option value="">Sélectionner…</option>
+                  {(socs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
+                </Select>
+              </Field>
+              <Field label="Société parent">
+                <Select value={form.socParentId} onChange={(e) => setForm({ ...form, socParentId: e.target.value })}>
+                  <option value="">Aucune</option>
+                  {(socs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
+                </Select>
+              </Field>
+            </div>
           )}
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input

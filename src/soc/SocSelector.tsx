@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { useSoc } from './SocContext'
-import { Button, Field, Input, Textarea } from '../components/ui'
+import { authApi, type CompanyLookup } from '../api/auth'
 import { Modal } from '../components/data'
+import { Button, Field, Input, Textarea } from '../components/ui'
+import { useSoc } from './SocContext'
 
 export function SocSelector() {
   const { socs, selectedSoc, selectSoc, canAddSoc, loading } = useSoc()
@@ -100,9 +101,14 @@ function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   const { addSoc } = useSoc()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [infosWeb, setInfosWeb] = useState('')
   const [siret, setSiret] = useState('')
   const [codeNaf, setCodeNaf] = useState('')
   const [urssaf, setUrssaf] = useState('')
+  const [gerant, setGerant] = useState('')
+  const [categorieEntreprise, setCategorieEntreprise] = useState('')
+  const [dateCreation, setDateCreation] = useState('')
+  const [dateFermeture, setDateFermeture] = useState('')
   const [website, setWebsite] = useState('')
   const [street, setStreet] = useState('')
   const [zipCode, setZipCode] = useState('')
@@ -110,19 +116,27 @@ function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   const [country, setCountry] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<CompanyLookup[]>([])
 
   function reset() {
     setName('')
     setDescription('')
+    setInfosWeb('')
     setSiret('')
     setCodeNaf('')
     setUrssaf('')
+    setGerant('')
+    setCategorieEntreprise('')
+    setDateCreation('')
+    setDateFermeture('')
     setWebsite('')
     setStreet('')
     setZipCode('')
     setCity('')
     setCountry('')
     setError(null)
+    setSearchResults([])
   }
 
   function close() {
@@ -142,10 +156,15 @@ function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       await addSoc({
         socName: name.trim(),
         description: description.trim() || undefined,
+        infosWeb: infosWeb.trim() || undefined,
         siret: siret.trim() || undefined,
         codeNaf: codeNaf.trim() || undefined,
         urssaf: urssaf.trim() || undefined,
-        website: website.trim() || undefined,
+        gerant: gerant.trim() || undefined,
+        categorieEntreprise: categorieEntreprise.trim() || undefined,
+        dateCreation: dateCreation || undefined,
+        dateFermeture: dateFermeture || undefined,
+        website: ensureHttps(website) || undefined,
         street: street.trim() || undefined,
         zipCode: zipCode.trim() || undefined,
         city: city.trim() || undefined,
@@ -159,10 +178,84 @@ function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     }
   }
 
+  async function searchCompany() {
+    if (!name.trim() && !siret.trim()) {
+      setError('Saisissez le nom ou le SIRET de la société')
+      return
+    }
+    setSearching(true)
+    setError(null)
+    try {
+      const companies = await authApi.searchSoc(name.trim() || undefined, siret.trim() || undefined)
+      if (companies.length !== 1) {
+        setSearchResults(companies)
+        if (companies.length === 0 && name.trim()) {
+          setWebsite(fallbackWebsite(name))
+        }
+        return
+      }
+      const company = companies[0]
+      if (company.name) setName(company.name)
+      if (company.infosWeb) setInfosWeb(company.infosWeb)
+      if (company.siret) setSiret(company.siret)
+      if (company.codeNaf) setCodeNaf(company.codeNaf)
+      if (company.gerant) setGerant(company.gerant)
+      if (company.categorieEntreprise) setCategorieEntreprise(company.categorieEntreprise)
+      if (company.dateCreation) setDateCreation(company.dateCreation)
+      if (company.dateFermeture) setDateFermeture(company.dateFermeture)
+       setWebsite(ensureHttps(company.website || fallbackWebsite(company.name || name)))
+      if (company.street) setStreet(company.street)
+      if (company.zipCode) setZipCode(company.zipCode)
+      if (company.city) setCity(company.city)
+      if (company.country) setCountry(company.country)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Recherche impossible')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  function clearCompanySearch() {
+    if (!window.confirm('Voulez-vous effacer tous les champs du formulaire ?')) return
+    reset()
+  }
+
+  function chooseCompany(company: CompanyLookup) {
+    if (company.name) setName(company.name)
+    if (company.infosWeb) setInfosWeb(company.infosWeb)
+    if (company.siret) setSiret(company.siret)
+    if (company.codeNaf) setCodeNaf(company.codeNaf)
+    if (company.gerant) setGerant(company.gerant)
+    if (company.categorieEntreprise) setCategorieEntreprise(company.categorieEntreprise)
+    if (company.dateCreation) setDateCreation(company.dateCreation)
+    if (company.dateFermeture) setDateFermeture(company.dateFermeture)
+     setWebsite(ensureHttps(company.website || fallbackWebsite(company.name || name)))
+    if (company.street) setStreet(company.street)
+    if (company.zipCode) setZipCode(company.zipCode)
+    if (company.city) setCity(company.city)
+    if (company.country) setCountry(company.country)
+    setSearchResults([])
+  }
+
+  function ensureHttps(value: string | null | undefined): string {
+    const website = value?.trim() ?? ''
+    if (!website) return ''
+    return /^https?:\/\//i.test(website) ? website.replace(/^http:\/\//i, 'https://') : `https://${website}`
+  }
+
+  function fallbackWebsite(companyName: string): string {
+    const slug = companyName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '')
+    return `https://www.${slug || 'societe'}.com`
+  }
+
   return (
     <Modal
       open={open}
-      title="Inscrire une nouvelle société"
+      title="Inscrire une nouvelle société : "
       onClose={close}
       size="lg"
       footer={
@@ -196,15 +289,41 @@ function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           />
         </Field>
 
+        <Field label="Informations web">
+          <Textarea rows={3} value={infosWeb} onChange={(e) => setInfosWeb(e.target.value)} />
+        </Field>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="SIRET">
-            <Input value={siret} onChange={(e) => setSiret(e.target.value)} placeholder="14 chiffres" />
+            <div className="flex flex-wrap gap-2">
+              <Input className="basis-full" value={siret} onChange={(e) => setSiret(e.target.value)} placeholder="14 chiffres" />
+              <div className="basis-full flex justify-start gap-2">
+                <Button type="button" onClick={searchCompany} disabled={searching} className="!w-auto whitespace-nowrap">
+                  {searching ? 'Recherche…' : 'Rechercher'}
+                </Button>
+                <Button type="button" onClick={clearCompanySearch} className="!w-auto whitespace-nowrap !bg-gray-100 !text-gray-700 hover:!bg-gray-200">
+                  Effacer
+                </Button>
+              </div>
+            </div>
           </Field>
           <Field label="Code NAF">
             <Input value={codeNaf} onChange={(e) => setCodeNaf(e.target.value)} placeholder="Ex : 6202A" />
           </Field>
           <Field label="URSSAF">
             <Input value={urssaf} onChange={(e) => setUrssaf(e.target.value)} />
+          </Field>
+          <Field label="Gérant">
+            <Input value={gerant} onChange={(e) => setGerant(e.target.value)} />
+          </Field>
+          <Field label="Catégorie entreprise">
+            <Input value={categorieEntreprise} onChange={(e) => setCategorieEntreprise(e.target.value)} />
+          </Field>
+          <Field label="Date de création">
+            <Input type="date" value={dateCreation} onChange={(e) => setDateCreation(e.target.value)} />
+          </Field>
+          <Field label="Date de fermeture">
+            <Input type="date" value={dateFermeture} onChange={(e) => setDateFermeture(e.target.value)} />
           </Field>
         </div>
 
@@ -235,6 +354,22 @@ function AddSocModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           </div>
         </fieldset>
       </form>
+      {searchResults.length > 1 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Choisir une société</h3>
+            <div className="mt-4 space-y-2">
+              {searchResults.map((company, index) => (
+                <button key={`${company.siret ?? company.name}-${index}`} type="button" onClick={() => chooseCompany(company)} className="w-full rounded-lg border border-gray-200 p-3 text-left hover:border-brand-500 hover:bg-brand-50">
+                  <span className="block font-medium text-gray-900">{company.name ?? 'Société sans nom'}</span>
+                  <span className="text-sm text-gray-500">{company.siret ?? 'SIRET inconnu'} · {company.city ?? 'Ville inconnue'}</span>
+                </button>
+              ))}
+            </div>
+            <Button type="button" onClick={() => setSearchResults([])} className="mt-4 !w-auto !bg-gray-100 !text-gray-700">Annuler</Button>
+          </div>
+        </div>
+      )}
     </Modal>
   )
 }

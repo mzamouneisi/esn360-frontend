@@ -38,9 +38,14 @@ export interface SocLiteDto {
 export interface AddSocPayload {
   socName: string
   description?: string | null
+  infosWeb?: string | null
   siret?: string | null
   codeNaf?: string | null
   urssaf?: string | null
+  gerant?: string | null
+  categorieEntreprise?: string | null
+  dateCreation?: string | null
+  dateFermeture?: string | null
   website?: string | null
   street?: string | null
   zipCode?: string | null
@@ -98,9 +103,12 @@ export interface SocDto {
   id: number
   name: string
   description?: string | null
+  infosWeb?: string | null
   siret?: string | null
   codeNaf?: string | null
   urssaf?: string | null
+  gerant?: string | null
+  categorieEntreprise?: string | null
   website?: string | null
   address?: Address | null
 }
@@ -190,6 +198,7 @@ export interface ClientDto {
   contactPhone: string | null
   notes?: string | null
   soc?: { id: number; name: string } | null
+  socParent?: { id: number; name: string } | null
   active: boolean
 }
 
@@ -200,6 +209,7 @@ export interface ClientRequest {
   contactPhone?: string | null
   notes?: string | null
   socId?: number | null
+  socParentId?: number | null
   active: boolean
 }
 
@@ -211,6 +221,7 @@ export interface SupplierDto {
   contactPhone: string | null
   notes?: string | null
   soc?: { id: number; name: string } | null
+  socParent?: { id: number; name: string } | null
   active: boolean
 }
 
@@ -221,6 +232,7 @@ export interface SupplierRequest {
   contactPhone?: string | null
   notes?: string | null
   socId?: number | null
+  socParentId?: number | null
   active: boolean
 }
 
