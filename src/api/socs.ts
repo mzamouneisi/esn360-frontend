@@ -13,6 +13,7 @@ export const socsApi = {
   update: (id: number, request: Partial<SocDto>) =>
     api.put<SocDto>(`/socs/${id}`, request),
   remove: (id: number) => api.delete<void>(`/socs/${id}`),
+  removeWithDependencies: (id: number) => api.delete<void>(`/socs/${id}/all`),
   dependencies: (id: number) => api.get<SocDependency[]>(`/socs/${id}/dependencies`),
   removeDependency: (socId: number, type: string, id: number) =>
     api.delete<void>(`/socs/${socId}/dependencies/${type}/${id}`),

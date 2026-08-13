@@ -10,6 +10,16 @@ import { Button, Card, Field, Input, Spinner, Textarea } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
 import { ROLE_LABELS, formatDateTime } from '../lib/format'
 
+const DEPENDENCY_LABELS: Record<string, string> = {
+  client: 'Client',
+  supplier: 'Fournisseur',
+  project: 'Projet',
+  consultant: 'Consultant',
+  activity: 'Activité',
+  activity_type: "Type d'activité",
+  subscription: 'Abonnement',
+}
+
 export function Profile() {
   const { user, refreshMe } = useAuth()
   const { socs } = useSoc()
@@ -108,19 +118,18 @@ export function Profile() {
     }
   }
 
-  async function deleteDependency(item: SocDependency) {
-    if (!deletingSoc || !window.confirm(`Supprimer « ${item.label} » ?`)) return
+  async function confirmDeleteAll() {
+    if (!deletingSoc) return
+    setDependencyLoading(true)
+    setSocError(null)
     try {
-      await socsApi.removeDependency(deletingSoc.id, item.type, item.id)
-      const remaining = await socsApi.dependencies(deletingSoc.id)
-      setDependencies(remaining)
-      if (remaining.length === 0) {
-        await socsApi.remove(deletingSoc.id)
-        setDeletingSoc(null)
-        window.location.reload()
-      }
+      await socsApi.removeWithDependencies(deletingSoc.id)
+      setDeletingSoc(null)
+      window.location.reload()
     } catch (err) {
-      setSocError(err instanceof ApiError ? err.message : 'Impossible de supprimer cet objet')
+      setSocError(err instanceof ApiError ? err.message : 'Impossible de supprimer la société')
+    } finally {
+      setDependencyLoading(false)
     }
   }
 
@@ -202,18 +211,32 @@ export function Profile() {
           {user.role === 'RESPONSIBLE_SOC' && socMessage && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{socMessage}</div>}
           {deletingSoc && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
-                <h3 className="text-lg font-semibold text-gray-900">Objets liés à {deletingSoc.name}</h3>
-                <p className="mt-1 text-sm text-gray-500">Supprimez chaque objet avant de supprimer la société.</p>
-                <div className="mt-4 space-y-2">
+              <div className="flex h-[500px] w-[500px] max-h-[90vh] max-w-[92vw] flex-col rounded-xl bg-white p-5 shadow-xl" role="dialog" aria-modal="true">
+                <h3 className="text-lg font-semibold text-gray-900">Supprimer la société « {deletingSoc.name} »</h3>
+                <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  Attention : cette société sera supprimée avec tous ses objets liés.
+                </div>
+                <p className="mt-3 text-sm font-medium text-gray-700">
+                  Objets liés ({dependencies.length})
+                </p>
+                <div className="mt-2 flex-1 space-y-2 overflow-y-auto">
                   {dependencies.map((item) => (
-                    <div key={`${item.type}-${item.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2">
-                      <span className="text-sm text-gray-700">{item.label} <span className="text-xs text-gray-400">({item.type})</span></span>
-                      <Button type="button" disabled={dependencyLoading} className="!w-auto !bg-red-600 !px-2 !py-1 !text-xs hover:!bg-red-700" onClick={() => void deleteDependency(item)}>Supprimer</Button>
+                    <div key={`${item.type}-${item.id}`} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+                      <svg className="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 1 1 0 10h-2" /><path d="M8 12h8" /></svg>
+                      <span className="truncate text-sm text-gray-700">{item.label}</span>
+                      <span className="ml-auto shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                        {DEPENDENCY_LABELS[item.type] ?? item.type}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <Button type="button" className="mt-4 !w-auto !bg-gray-100 !text-gray-700" onClick={() => setDeletingSoc(null)}>Annuler</Button>
+                <div className="mt-4 flex items-center justify-end gap-2 border-t border-gray-200 pt-3">
+                  <Button type="button" className="!w-auto !bg-gray-100 !text-gray-700" onClick={() => setDeletingSoc(null)} disabled={dependencyLoading}>Annuler</Button>
+                  <Button type="button" className="!w-auto !bg-red-600 hover:!bg-red-700" onClick={() => void confirmDeleteAll()} disabled={dependencyLoading}>
+                    {dependencyLoading ? <Spinner className="border-white border-t-transparent" /> : null}
+                    Tout supprimer
+                  </Button>
+                </div>
               </div>
             </div>
           )}
