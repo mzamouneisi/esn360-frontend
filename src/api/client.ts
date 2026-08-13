@@ -20,7 +20,16 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler
 }
 
-let currentSocId: number | null = null
+const SOC_STORAGE_KEY = 'soc360.selectedSocId'
+
+function persistedSocId(): number | null {
+  const raw = localStorage.getItem(SOC_STORAGE_KEY)
+  if (!raw) return null
+  const id = Number(raw)
+  return Number.isFinite(id) ? id : null
+}
+
+let currentSocId: number | null = persistedSocId()
 
 export function setCurrentSocId(id: number | null): void {
   currentSocId = id
