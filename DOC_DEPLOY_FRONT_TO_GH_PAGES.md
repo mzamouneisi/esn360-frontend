@@ -131,6 +131,7 @@ export JAVA_HOME=/c/pgm/java/jdk-17.0.11
 
 ## 8. Dépannage
 
+- **Login renvoie `401 Unauthorized` / « Identifiants invalides »** : le front est déjà correctement pointé vers le backend Azure (vérifier l'URL dans l'onglet Network) ; le 401 signifie qu'aucun compte ne correspond dans la base Azure. Sur le backend **dev**, `SEED_DEMO_DATA` est activé par défaut (`env.server.sh`) : redéployer le backend (`deploy_app_docker.sh`) puis se connecter avec `admin` / `Admin123!` (le compte est créé même si la base contient déjà des lignes). En prod, désactiver le seed et créer un compte via la page d'inscription.
 - **Le site affiche 404 sur une page interne** : GitHub Pages a renvoyé la page `404.html` (liens profonds) — vérifier que `docs/404.html` est présent et que la redirection mène bien à la racine du site concerné.
 - **Erreurs CORS** : vérifier que le backend a été redéployé avec `SECURITY_CORS_ALLOWED_ORIGINS` contenant `https://mzamouneisi.github.io`.
 - **`VITE_API_BASE_URL` non prise en compte** : penser à relancer le build (la valeur est embarquée au build, pas à la volée).

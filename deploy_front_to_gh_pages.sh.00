@@ -13,37 +13,6 @@
 
 set -euo pipefail
 
-# Fonction pour trouver npm (essaie npm.cmd en priorité)
-find_npm() {
-  # Priorité à npm.cmd pour Windows/MobaXterm
-  if command -v npm.cmd >/dev/null 2>&1; then
-    echo "npm.cmd"
-    return 0
-  elif command -v npm >/dev/null 2>&1; then
-    echo "npm"
-    return 0
-  else
-    # Cherche dans les chemins Windows courants
-    for path in "/cygdrive/c/pgm/nvm/v22.0.0/npm.cmd" "/c/pgm/nvm/v22.0.0/npm.cmd" "/cygdrive/c/pgm/nvm/v22.0.0/npm" "/c/pgm/nvm/v22.0.0/npm"; do
-      if [ -f "$path" ] && [ -x "$path" ]; then
-        echo "$path"
-        return 0
-      fi
-    done
-    return 1
-  fi
-}
-
-# Trouver npm
-NPM_CMD=$(find_npm)
-if [ -z "$NPM_CMD" ]; then
-  echo "ERROR: npm introuvable. Veuillez installer Node.js/npm."
-  exit 1
-fi
-
-# Log du chemin npm utilisé
-echo "npm utilisé : $NPM_CMD"
-
 TARGET="${1:-dev}"
 
 case "$TARGET" in
@@ -65,7 +34,7 @@ case "$TARGET" in
     PROD_PAGES_REPO="${PROD_PAGES_REPO:-git@github.com:mzamouneisi/soc360-front-react-prod.git}"
     ;;
   *)
-    echo "ERROR: Cible inconnue '$TARGET' (valeurs possibles : dev, prod)."
+    log "ERROR: Cible inconnue '$TARGET' (valeurs possibles : dev, prod)."
     exit 1
     ;;
 esac
@@ -93,27 +62,27 @@ if [ "$BRANCH_NAME" != "$BRANCH_REQUIRED" ]; then
   exit 1
 fi
 
-# Vérification de git
-if ! command -v git >/dev/null 2>&1; then
-  log "ERROR: git introuvable."
-  exit 1
-fi
+for cmd in git npm; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    log "ERROR: Commande requise introuvable : $cmd"
+    exit 1
+  fi
+done
 
 log "=== Deploiement GitHub Pages '$TARGET' (branche '$BRANCH_NAME', dossier '$OUT_DIR/') ==="
 log "URL publique : $PAGES_URL"
-log "npm utilisé : $NPM_CMD"
 
 log "Lint..."
-$NPM_CMD run lint
+npm run lint
 
 log "Tests..."
-$NPM_CMD test
+npm test
 
 log "Build vers '$OUT_DIR/' (base et URL API lues dans $ENV_FILE, mode $VITE_MODE)..."
 if [ "$TARGET" = "prod" ]; then
-  $NPM_CMD run build:pages:prod
+  npm run build:pages:prod
 else
-  $NPM_CMD run build:pages
+  npm run build:pages
 fi
 
 if [ ! -f "$OUT_DIR/index.html" ]; then
