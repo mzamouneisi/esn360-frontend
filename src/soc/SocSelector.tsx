@@ -5,9 +5,10 @@ import { Button, Field, Input, Textarea } from '../components/ui'
 import { useSoc } from './SocContext'
 
 export function SocSelector() {
-  const { socs, selectedSoc, selectSoc, canAddSoc, loading } = useSoc()
+  const { socs, selectedSoc, selectSoc, canAddSoc, loading, favoriteSocId, setFavoriteSoc } = useSoc()
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [favoriting, setFavoriting] = useState<number | null>(null)
 
   return (
     <div className="relative">
@@ -41,35 +42,67 @@ export function SocSelector() {
               <p className="px-3 py-2 text-sm text-gray-500">Aucune société associée</p>
             ) : (
               <ul role="listbox" aria-label="Société active">
-                {socs.map((soc) => (
-                  <li key={soc.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={soc.id === selectedSoc?.id}
-                      onClick={() => {
-                        selectSoc(soc.id)
-                        setOpen(false)
-                      }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-                        soc.id === selectedSoc?.id
-                          ? 'bg-brand-50 font-medium text-brand-700'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="truncate">{soc.name}</span>
-                      {soc.id === selectedSoc?.id && (
-                        <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4l3.3 3.29 7.3-7.3a1 1 0 0 1 1.4 0Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+                {socs.map((soc) => {
+                  const isFavorite = soc.id === favoriteSocId
+                  const isSelected = soc.id === selectedSoc?.id
+                  return (
+                    <li key={soc.id} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => {
+                          selectSoc(soc.id)
+                          setOpen(false)
+                        }}
+                        className={`flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                          isSelected
+                            ? 'bg-brand-50 font-medium text-brand-700'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="truncate">{soc.name}</span>
+                        {isSelected && (
+                          <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path
+                              fillRule="evenodd"
+                              d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4l3.3 3.29 7.3-7.3a1 1 0 0 1 1.4 0Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                      {canAddSoc && (
+                        <button
+                          type="button"
+                          title={isFavorite ? 'Société favorite' : 'Définir comme favorite'}
+                          aria-label={isFavorite ? 'Société favorite' : 'Définir comme favorite'}
+                          disabled={favoriting === soc.id}
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            setFavoriting(soc.id)
+                            try {
+                              await setFavoriteSoc(soc.id)
+                            } finally {
+                              setFavoriting(null)
+                            }
+                          }}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:bg-amber-50 ${
+                            isFavorite ? 'text-amber-500' : 'text-gray-300 hover:text-amber-500'
+                          }`}
+                        >
+                          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path
+                              fillRule="evenodd"
+                              d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
                       )}
-                    </button>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             )}
 

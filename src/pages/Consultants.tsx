@@ -18,6 +18,7 @@ import { formatDate, formatMoney } from '../lib/format'
 import { useAsync } from '../lib/useAsync'
 import type { ConsultantDto, ManagerSummary } from '../api/types'
 import { useCallback, useEffect } from 'react'
+import { useSoc } from '../soc/SocContext'
 
 interface FormState {
   firstName: string
@@ -57,8 +58,10 @@ const emptyForm: FormState = {
 
 export function Consultants() {
   const { user } = useAuth()
+  const { selectedSocId: workingSocContextId } = useSoc()
   const isAdmin = user?.role === 'ADMIN'
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const workingSocId = isAdmin ? undefined : (workingSocContextId ?? user?.socId ?? undefined)
 
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -76,12 +79,12 @@ export function Consultants() {
   const { data, loading, error, reload, setData } = useAsync(
     () =>
       consultantsApi.findAll({
-        socId: isAdmin ? undefined : user?.socId ?? undefined,
+        socId: workingSocId,
         search: debounced || undefined,
         page,
         size,
       }),
-    [user?.socId, isAdmin, debounced, page, size],
+    [workingSocId, debounced, page, size],
   )
 
   const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
@@ -110,7 +113,7 @@ export function Consultants() {
   const managerOptions = useMemo(() => managers ?? [], [managers])
 
   function openCreate() {
-    setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') })
+    setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
@@ -129,7 +132,7 @@ export function Consultants() {
       baseSalary: c.baseSalary != null ? String(c.baseSalary) : '',
       currency: c.currency ?? 'EUR',
       nationality: c.nationality ?? '',
-      socId: String(c.socId ?? user?.socId ?? ''),
+      socId: String(c.socId ?? workingSocId ?? user?.socId ?? ''),
       managerId: c.managerId != null ? String(c.managerId) : '',
       username: c.username ?? '',
       password: '',
@@ -169,7 +172,7 @@ export function Consultants() {
         baseSalary: form.baseSalary ? Number(form.baseSalary) : null,
         currency: form.currency || 'EUR',
         nationality: form.nationality || null,
-        socId: isAdmin ? Number(form.socId) : user?.socId ?? 0,
+        socId: isAdmin ? Number(form.socId) : Number(workingSocId ?? user?.socId ?? 0),
         managerId: form.managerId ? Number(form.managerId) : null,
         username: creatingAccount ? form.username.trim() : null,
         password: creatingAccount ? form.password : null,
@@ -205,7 +208,7 @@ export function Consultants() {
     setImportError(null)
     setImportResult(null)
     try {
-      const result = await consultantsApi.importCsv(importFile, Number(isAdmin ? form.socId : user?.socId))
+      const result = await consultantsApi.importCsv(importFile, Number(isAdmin ? form.socId : workingSocId ?? user?.socId))
       setImportResult(result)
       reload()
     } catch (err) {
@@ -225,7 +228,7 @@ export function Consultants() {
         actions={
           canEdit ? (
             <>
-              <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') }) }}>
+              <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') }) }}>
                 Importer CSV
               </InlineButton>
               <Button className="w-auto" onClick={openCreate}>

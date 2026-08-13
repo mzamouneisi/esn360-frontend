@@ -73,5 +73,7 @@ export const authApi = {
   mySocs: () => api.get<SocLiteDto[]>('/auth/me/socs'),
   addSoc: (payload: AddSocPayload) =>
     api.post<SocLiteDto>('/auth/me/socs', payload),
+  setFavoriteSoc: (socId: number) =>
+    api.put<UserDto>(`/auth/me/socs/${socId}/favorite`),
   connections: () => api.get<ConnectionDto[]>('/auth/connections'),
 }

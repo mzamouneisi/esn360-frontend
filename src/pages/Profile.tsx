@@ -22,7 +22,8 @@ const DEPENDENCY_LABELS: Record<string, string> = {
 
 export function Profile() {
   const { user, refreshMe } = useAuth()
-  const { socs } = useSoc()
+  const { socs, selectedSocId, selectSoc, favoriteSocId, setFavoriteSoc } = useSoc()
+  const [favoriting, setFavoriting] = useState<number | null>(null)
   const [editingSoc, setEditingSoc] = useState<SocDto | null>(null)
   const [socSaving, setSocSaving] = useState(false)
   const [socError, setSocError] = useState<string | null>(null)
@@ -78,6 +79,15 @@ export function Profile() {
       setEditingSoc(await socsApi.getById(id).then((detail) => detail.soc))
     } catch (err) {
       setSocError(err instanceof ApiError ? err.message : 'Impossible de charger la société')
+    }
+  }
+
+  async function toggleFavorite(id: number) {
+    setFavoriting(id)
+    try {
+      await setFavoriteSoc(id)
+    } finally {
+      setFavoriting(null)
     }
   }
 
@@ -172,10 +182,30 @@ export function Profile() {
                   <ul className="space-y-1">
                     {socs.map((e) => (
                       <li key={e.id} className="flex flex-wrap items-center gap-2">
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
-                        <span>{e.name}</span>
+                        <span className={e.id === favoriteSocId ? 'h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500' : 'h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500'} />
+                        <span className={e.id === favoriteSocId ? 'font-medium text-amber-600' : undefined}>{e.name}</span>
                         {user.role === 'RESPONSIBLE_SOC' && (
                           <span className="ml-auto flex gap-2">
+                            <Button
+                              type="button"
+                              aria-label={`Sélectionner ${e.name}`}
+                              title={e.id === selectedSocId ? 'Société de travail' : 'Travailler avec cette société'}
+                              disabled={e.id === selectedSocId}
+                              className="!w-auto !bg-gray-100 !px-2 !py-1 !text-xs !text-gray-700"
+                              onClick={() => selectSoc(e.id)}
+                            >
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill={e.id === selectedSocId ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 6v12M6 12h12" /></svg>
+                            </Button>
+                            <Button
+                              type="button"
+                              aria-label={e.id === favoriteSocId ? 'Société favorite' : 'Définir comme favorite'}
+                              title={e.id === favoriteSocId ? 'Société favorite' : 'Définir comme favorite'}
+                              disabled={favoriting === e.id}
+                              className={`!w-auto !px-2 !py-1 !text-xs ${e.id === favoriteSocId ? '!bg-amber-100 !text-amber-600' : '!bg-gray-100 !text-gray-700'}`}
+                              onClick={() => void toggleFavorite(e.id)}
+                            >
+                              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z" clipRule="evenodd" /></svg>
+                            </Button>
                             <Button type="button" aria-label={`Modifier ${e.name}`} title="Modifier" className="!w-auto !bg-gray-100 !px-2 !py-1 !text-xs !text-gray-700" onClick={() => void editSoc(e.id)}>
                               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
                             </Button>
