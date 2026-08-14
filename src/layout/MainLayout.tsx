@@ -9,6 +9,7 @@ interface NavItem {
   to: string
   label: string
   icon: string
+  end?: boolean
 }
 
 interface NavSection {
@@ -65,7 +66,7 @@ function NavSection({ section, role }: { section: NavSection; role: Role }) {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.end ?? item.to === '/'}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
                 isActive
@@ -130,12 +131,21 @@ export function MainLayout() {
     },
   ]
 
+  if (user.role === 'ADMIN' || user.role === 'RESPONSIBLE_SOC') {
+    sections.unshift({
+      title: 'Sociétés',
+      items: [
+        { to: '/soc', label: 'Mes sociétés', icon: ICONS.soc, end: true },
+        { to: '/soc/toutes', label: 'Toutes les sociétés', icon: ICONS.soc },
+      ],
+    })
+  }
+
   if (isAdmin) {
     sections.push({
       title: 'Administration',
       items: [
         { to: '/utilisateurs', label: 'Utilisateurs', icon: ICONS.users },
-        { to: '/soc', label: 'Sociétés', icon: ICONS.soc },
         { to: '/tables', label: 'Base de données', icon: ICONS.tables },
         { to: '/logs', label: 'Logs du serveur', icon: ICONS.logs },
       ],

@@ -1,169 +1,428 @@
-import { useState } from 'react'
-import { socsApi } from '../api/socs'
+import { useMemo, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { useSoc } from '../soc/SocContext'
+import { AddSocModal } from '../soc/AddSocModal'
+import { socsApi, type SocDependency } from '../api/socs'
+import { ApiError } from '../api/client'
+import type { AddSocPayload, SocDto, SocLiteDto } from '../api/types'
 import { useAsync } from '../lib/useAsync'
-import { Card, Select } from '../components/ui'
-import { Badge, EmptyState, ErrorBlock, LoadingBlock, PageHeader, Table } from '../components/data'
-import { SUBSCRIPTION_STATUS_LABELS, formatDate, formatMoney, statusBadge } from '../lib/format'
+import { Button, Field, Input, InlineButton, Spinner, Textarea } from '../components/ui'
+import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 
-export function SocAdmin() {
-  const { data: socs, loading, error } = useAsync(() => socsApi.findAll(), [])
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+interface EditForm {
+  name: string
+  description: string
+  infosWeb: string
+  siret: string
+  codeNaf: string
+  urssaf: string
+  gerant: string
+  categorieEntreprise: string
+  dateCreation: string
+  dateFermeture: string
+  website: string
+  street: string
+  zipCode: string
+  city: string
+  country: string
+}
 
-  const { data: detail, loading: detailLoading } = useAsync(
-    () => (selectedId ? socsApi.getById(selectedId) : Promise.resolve(null)),
-    [selectedId],
-  )
+const DEPENDENCY_LABELS: Record<string, string> = {
+  client: 'Client',
+  supplier: 'Fournisseur',
+  project: 'Projet',
+  consultant: 'Consultant',
+  activity: 'Activité',
+  activity_type: "Type d'activité",
+  subscription: 'Abonnement',
+}
+
+export function SocAdmin({ scope = 'mine' }: { scope?: 'mine' | 'all' }) {
+  const { user } = useAuth()
+  const { socs: userSocs } = useSoc()
+  const isAdmin = user?.role === 'ADMIN'
+
+  const { data: socs, loading, error, reload, setData } = useAsync(() => socsApi.findAll(), [])
+  const [search, setSearch] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const [editingForm, setEditingForm] = useState<{ soc: SocDto; form: EditForm } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<SocDto | null>(null)
+  const [dependencies, setDependencies] = useState<SocDependency[]>([])
+  const [dependencyLoading, setDependencyLoading] = useState(false)
+
+  const mine = scope === 'mine' && !isAdmin
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    let list = socs ?? []
+    if (mine) {
+      const mineIds = new Set(userSocs.map((s) => s.id))
+      list = list.filter((s) => mineIds.has(s.id))
+    }
+    if (!q) return list
+    return list.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.siret ?? '').toLowerCase().includes(q) ||
+        (s.gerant ?? '').toLowerCase().includes(q),
+    )
+  }, [socs, search, mine, userSocs])
+
+  const canManage = (soc: SocDto) => isAdmin || userSocs.some((s) => s.id === soc.id)
+
+  async function createSoc(payload: AddSocPayload): Promise<SocLiteDto> {
+    const soc = await socsApi.create({
+      name: payload.socName,
+      description: payload.description ?? null,
+      infosWeb: payload.infosWeb ?? null,
+      siret: payload.siret ?? null,
+      codeNaf: payload.codeNaf ?? null,
+      urssaf: payload.urssaf ?? null,
+      gerant: payload.gerant ?? null,
+      categorieEntreprise: payload.categorieEntreprise ?? null,
+      dateCreation: payload.dateCreation ?? null,
+      dateFermeture: payload.dateFermeture ?? null,
+      website: payload.website ?? null,
+      address:
+        payload.street || payload.zipCode || payload.city || payload.country
+          ? {
+              street: payload.street ?? null,
+              zipCode: payload.zipCode ?? null,
+              city: payload.city ?? null,
+              country: payload.country ?? null,
+            }
+          : null,
+    })
+    return { id: soc.id, name: soc.name }
+  }
+
+  function openEdit(soc: SocDto) {
+    setActionError(null)
+    setEditingForm({
+      soc,
+      form: {
+        name: soc.name,
+        description: soc.description ?? '',
+        infosWeb: soc.infosWeb ?? '',
+        siret: soc.siret ?? '',
+        codeNaf: soc.codeNaf ?? '',
+        urssaf: soc.urssaf ?? '',
+        gerant: soc.gerant ?? '',
+        categorieEntreprise: soc.categorieEntreprise ?? '',
+        dateCreation: soc.dateCreation ?? '',
+        dateFermeture: soc.dateFermeture ?? '',
+        website: soc.website ?? '',
+        street: soc.address?.street ?? '',
+        zipCode: soc.address?.zipCode ?? '',
+        city: soc.address?.city ?? '',
+        country: soc.address?.country ?? '',
+      },
+    })
+  }
+
+  async function saveEdit() {
+    if (!editingForm) return
+    const f = editingForm.form
+    if (!f.name.trim()) {
+      setActionError('Le nom de la société est obligatoire')
+      return
+    }
+    setSaving(true)
+    setActionError(null)
+    try {
+      const saved = await socsApi.update(editingForm.soc.id, {
+        name: f.name.trim(),
+        description: f.description.trim() || null,
+        infosWeb: f.infosWeb.trim() || null,
+        siret: f.siret.trim() || null,
+        codeNaf: f.codeNaf.trim() || null,
+        urssaf: f.urssaf.trim() || null,
+        gerant: f.gerant.trim() || null,
+        categorieEntreprise: f.categorieEntreprise.trim() || null,
+        dateCreation: f.dateCreation || null,
+        dateFermeture: f.dateFermeture || null,
+        website: f.website.trim() || null,
+        address: {
+          street: f.street.trim() || null,
+          zipCode: f.zipCode.trim() || null,
+          city: f.city.trim() || null,
+          country: f.country.trim() || null,
+        },
+      })
+      setData((prev) => (prev ?? []).map((s) => (s.id === saved.id ? saved : s)))
+      setEditingForm(null)
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Impossible de modifier la société')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(soc: SocDto) {
+    setActionError(null)
+    if (!window.confirm(`Supprimer la société « ${soc.name} » ?`)) return
+    setDependencyLoading(true)
+    try {
+      const linked = await socsApi.dependencies(soc.id)
+      const consultant = linked.find((d) => d.type === 'consultant')
+      if (consultant) {
+        setActionError(`Impossible de supprimer : la société est utilisée par des consultants (« ${consultant.label} »).`)
+        return
+      }
+      if (linked.length > 0) {
+        setDeleting(soc)
+        setDependencies(linked)
+        return
+      }
+      await socsApi.remove(soc.id)
+      setData((prev) => (prev ?? []).filter((s) => s.id !== soc.id))
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Impossible de supprimer la société')
+    } finally {
+      setDependencyLoading(false)
+    }
+  }
+
+  async function confirmDeleteAll() {
+    if (!deleting) return
+    setDependencyLoading(true)
+    setActionError(null)
+    try {
+      await socsApi.removeWithDependencies(deleting.id)
+      setData((prev) => (prev ?? []).filter((s) => s.id !== deleting.id))
+      setDeleting(null)
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Impossible de supprimer la société')
+    } finally {
+      setDependencyLoading(false)
+    }
+  }
 
   return (
     <div>
-      <PageHeader title="Sociétés" subtitle="Abonnements et paiements des sociétés" />
+      <PageHeader
+        title={scope === 'mine' ? 'Mes sociétés' : 'Toutes les sociétés'}
+        subtitle={
+          scope === 'mine'
+            ? isAdmin
+              ? "Toutes les sociétés de l'application (vue administrateur)"
+              : 'Les sociétés liées à votre compte'
+            : "Toutes les sociétés de l'application"
+        }
+        actions={
+          <Button className="w-auto" onClick={() => setAddOpen(true)}>
+            + Nouvelle société
+          </Button>
+        }
+      />
 
       {error && <ErrorBlock message={error} />}
+      {actionError && <div className="mb-4"><ErrorBlock message={actionError} /></div>}
       {loading && <LoadingBlock />}
 
-      {!loading && socs && socs.length === 0 && (
-        <EmptyState title="Aucune société" description="Aucune société enregistrée sur la plateforme." />
+      {!loading && socs && socs.length > 0 && (
+        <div className="mb-4">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par nom, SIRET ou gérant…"
+            className="max-w-md"
+          />
+        </div>
       )}
 
-      {!loading && socs && socs.length > 0 && (
-        <>
-          <Card className="mb-6 p-4">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              Société :
-              <Select
-                className="w-80"
-                value={selectedId ?? ''}
-                onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">Sélectionner…</option>
-                {socs.map((soc) => (
-                  <option key={soc.id} value={soc.id}>
-                    {soc.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          </Card>
+      {!loading && socs !== null && filtered.length === 0 && (
+        <EmptyState
+          title={search ? 'Aucun résultat' : 'Aucune société'}
+          description={
+            search
+              ? 'Aucune société ne correspond à votre recherche.'
+              : 'Aucune société enregistrée sur la plateforme.'
+          }
+        />
+      )}
 
-          {detailLoading && <LoadingBlock />}
-
-          {!detailLoading && selectedId && !detail && (
-            <Card className="p-6 text-sm text-gray-500">Aucune donnée pour cette société.</Card>
-          )}
-
-          {detail && (
-            <>
-              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Card className="p-5">
-                  <p className="text-sm font-medium text-gray-500">Société</p>
-                  <p className="mt-1 font-semibold text-gray-900">{detail.soc.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {detail.soc.siret ? `SIRET ${detail.soc.siret}` : 'SIRET non renseigné'}
-                  </p>
-                  {detail.soc.website && (
-                    <a
-                      href={detail.soc.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-brand-600 hover:underline"
+      {!loading && filtered.length > 0 && (
+        <Table
+          rowKey={(s) => s.id}
+          rows={filtered}
+          columns={[
+            {
+              key: 'name',
+              label: 'Société',
+              render: (s) => <span className="font-medium text-gray-900">{s.name}</span>,
+            },
+            {
+              key: 'siret',
+              label: 'SIRET',
+              render: (s) => <span className="text-gray-600">{s.siret ?? '—'}</span>,
+            },
+            {
+              key: 'gerant',
+              label: 'Gérant',
+              render: (s) => <span className="text-gray-600">{s.gerant ?? '—'}</span>,
+            },
+            {
+              key: 'ville',
+              label: 'Ville',
+              render: (s) => <span className="text-gray-600">{s.address?.city ?? '—'}</span>,
+            },
+            {
+              key: 'status',
+              label: 'Géré par moi',
+              render: (s) =>
+                canManage(s) ? (
+                  <Badge kind="success">Oui</Badge>
+                ) : (
+                  <Badge kind="muted">Non</Badge>
+                ),
+            },
+            {
+              key: 'actions',
+              label: '',
+              render: (s) =>
+                canManage(s) ? (
+                  <div className="flex justify-end gap-1">
+                    <InlineButton
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(s)
+                      }}
                     >
-                      {detail.soc.website}
-                    </a>
-                  )}
-                </Card>
-                <Card className="p-5">
-                  <p className="text-sm font-medium text-gray-500">Abonnements actifs</p>
-                  <p className="mt-1 text-2xl font-bold text-gray-900">
-                    {detail.subscriptions.filter(
-                      (s) => s.status === 'ACTIVE' || s.status === 'TRIAL',
-                    ).length}
-                  </p>
-                </Card>
-                <Card className="p-5">
-                  <p className="text-sm font-medium text-gray-500">Total réglé</p>
-                  <p className="mt-1 text-2xl font-bold text-gray-900">
-                    {formatMoney(detail.payments.reduce((sum, p) => sum + p.amount, 0))}
-                  </p>
-                </Card>
-              </div>
+                      Modifier
+                    </InlineButton>
+                    <InlineButton
+                      className="text-red-600 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void handleDelete(s)
+                      }}
+                    >
+                      Supprimer
+                    </InlineButton>
+                  </div>
+                ) : (
+                  <></>
+                ),
+            },
+          ]}
+        />
+      )}
 
-              <h3 className="mb-3 text-sm font-semibold text-gray-900">Abonnements</h3>
-              {detail.subscriptions.length === 0 ? (
-                <p className="mb-6 text-sm text-gray-400">Aucun abonnement.</p>
-              ) : (
-                <Table
-                  rowKey={(s) => s.id}
-                  rows={detail.subscriptions}
-                  columns={[
-                    {
-                      key: 'plan',
-                      label: 'Formule',
-                      render: (s) => <span className="font-medium text-gray-900">{s.plan}</span>,
-                    },
-                    {
-                      key: 'status',
-                      label: 'Statut',
-                      render: (s) => (
-                        <Badge kind={statusBadge(s.status)}>
-                          {SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      key: 'dates',
-                      label: 'Période',
-                      render: (s) => (
-                        <span className="text-gray-500">
-                          {formatDate(s.startDate)} → {formatDate(s.endDate)}
-                          {s.trialEndDate && ` · essai fin ${formatDate(s.trialEndDate)}`}
-                        </span>
-                      ),
-                    },
-                    {
-                      key: 'price',
-                      label: 'Mensuel',
-                      render: (s) => <span>{formatMoney(s.monthlyPrice)}</span>,
-                    },
-                  ]}
-                />
-              )}
+      <AddSocModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        submit={isAdmin ? createSoc : undefined}
+        onCreated={() => reload()}
+        defaultMine={scope === 'mine'}
+      />
 
-              <h3 className="mb-3 mt-6 text-sm font-semibold text-gray-900">Paiements</h3>
-              {detail.payments.length === 0 ? (
-                <p className="text-sm text-gray-400">Aucun paiement enregistré.</p>
-              ) : (
-                <Table
-                  rowKey={(p) => p.id}
-                  rows={detail.payments}
-                  columns={[
-                    {
-                      key: 'date',
-                      label: 'Date',
-                      render: (p) => <span className="text-gray-500">{formatDate(p.paymentDate)}</span>,
-                    },
-                    {
-                      key: 'amount',
-                      label: 'Montant',
-                      render: (p) => (
-                        <span className="font-medium text-gray-900">{formatMoney(p.amount)}</span>
-                      ),
-                    },
-                    {
-                      key: 'method',
-                      label: 'Moyen',
-                      render: (p) => <span>{p.method}</span>,
-                    },
-                    {
-                      key: 'reference',
-                      label: 'Référence',
-                      render: (p) => <span className="text-gray-500">{p.reference ?? '—'}</span>,
-                    },
-                  ]}
-                />
-              )}
+      {editingForm && (
+        <Modal
+          open
+          onClose={() => setEditingForm(null)}
+          title={`Modifier ${editingForm.soc.name}`}
+          size="lg"
+          footer={
+            <>
+              <Button type="button" className="!w-auto !bg-gray-100 !text-gray-700 hover:!bg-gray-200" onClick={() => setEditingForm(null)}>
+                Annuler
+              </Button>
+              <Button type="button" disabled={saving} onClick={() => void saveEdit()} className="!w-auto">
+                {saving ? <Spinner className="border-white border-t-transparent" /> : null}
+                Enregistrer
+              </Button>
             </>
-          )}
-        </>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Nom de la société *">
+              <Input value={editingForm.form.name} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, name: e.target.value } })} />
+            </Field>
+            <Field label="SIRET">
+              <Input value={editingForm.form.siret} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, siret: e.target.value } })} />
+            </Field>
+            <Field label="Gérant">
+              <Input value={editingForm.form.gerant} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, gerant: e.target.value } })} />
+            </Field>
+            <Field label="Code NAF">
+              <Input value={editingForm.form.codeNaf} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, codeNaf: e.target.value } })} />
+            </Field>
+            <Field label="URSSAF">
+              <Input value={editingForm.form.urssaf} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, urssaf: e.target.value } })} />
+            </Field>
+            <Field label="Catégorie entreprise">
+              <Input value={editingForm.form.categorieEntreprise} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, categorieEntreprise: e.target.value } })} />
+            </Field>
+            <Field label="Date de création">
+              <Input type="date" value={editingForm.form.dateCreation} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, dateCreation: e.target.value } })} />
+            </Field>
+            <Field label="Date de fermeture">
+              <Input type="date" value={editingForm.form.dateFermeture} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, dateFermeture: e.target.value } })} />
+            </Field>
+            <Field label="Site web">
+              <Input type="url" value={editingForm.form.website} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, website: e.target.value } })} />
+            </Field>
+            <Field label="Rue">
+              <Input value={editingForm.form.street} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, street: e.target.value } })} />
+            </Field>
+            <Field label="Code postal">
+              <Input value={editingForm.form.zipCode} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, zipCode: e.target.value } })} />
+            </Field>
+            <Field label="Ville">
+              <Input value={editingForm.form.city} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, city: e.target.value } })} />
+            </Field>
+            <Field label="Pays">
+              <Input value={editingForm.form.country} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, country: e.target.value } })} />
+            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Description">
+                <Textarea rows={3} value={editingForm.form.description} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, description: e.target.value } })} />
+              </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="Informations web">
+                <Textarea rows={3} value={editingForm.form.infosWeb} onChange={(e) => setEditingForm({ ...editingForm, form: { ...editingForm.form, infosWeb: e.target.value } })} />
+              </Field>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {deleting && (
+        <Modal
+          open
+          onClose={() => setDeleting(null)}
+          title={`Supprimer la société « ${deleting.name} »`}
+          footer={
+            <>
+              <Button type="button" className="!w-auto !bg-gray-100 !text-gray-700 hover:!bg-gray-200" onClick={() => setDeleting(null)} disabled={dependencyLoading}>
+                Annuler
+              </Button>
+              <Button type="button" className="!w-auto !bg-red-600 hover:!bg-red-700" onClick={() => void confirmDeleteAll()} disabled={dependencyLoading}>
+                {dependencyLoading ? <Spinner className="border-white border-t-transparent" /> : null}
+                Tout supprimer
+              </Button>
+            </>
+          }
+        >
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            Attention : cette société sera supprimée avec tous ses objets liés.
+          </div>
+          <p className="mt-3 text-sm font-medium text-gray-700">Objets liés ({dependencies.length})</p>
+          <div className="mt-2 max-h-64 space-y-2 overflow-y-auto">
+            {dependencies.map((item) => (
+              <div key={`${item.type}-${item.id}`} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+                <span className="truncate text-sm text-gray-700">{item.label}</span>
+                <span className="ml-auto shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                  {DEPENDENCY_LABELS[item.type] ?? item.type}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Modal>
       )}
     </div>
   )

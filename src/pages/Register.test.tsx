@@ -71,7 +71,7 @@ describe('Register company search controls', () => {
     expect(await screen.findByText('VEOLIA WATER STI')).toBeInTheDocument()
   })
 
-  it('fills the fallback website when no company is found', async () => {
+  it('leaves the website empty when no company is found', async () => {
     searchSoc.mockResolvedValue([])
 
     const user = userEvent.setup()
@@ -79,7 +79,7 @@ describe('Register company search controls', () => {
     await user.type(screen.getByPlaceholderText('Ma société de conseil'), 'Ma Société')
     await user.click(screen.getByRole('button', { name: 'Rechercher' }))
 
-    expect(screen.getByLabelText('Site web')).toHaveValue('https://www.masociete.com')
+    expect(screen.getByLabelText('Site web')).toHaveValue('')
   })
 
   it('clears all form fields after confirmation', async () => {

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Spinner } from './ui'
 import { badgeClasses } from '../lib/format'
 
@@ -208,7 +209,7 @@ export function Modal({
     xl: 'max-w-4xl',
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4 sm:p-8">
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
       <div
@@ -235,6 +236,7 @@ export function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

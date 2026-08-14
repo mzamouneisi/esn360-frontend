@@ -47,6 +47,7 @@ export interface CompanyLookup {
   dateCreation: string | null
   dateFermeture: string | null
   website: string | null
+  tel: string | null
   street: string | null
   zipCode: string | null
   city: string | null

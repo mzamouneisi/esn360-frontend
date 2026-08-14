@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { activitiesApi, activityTypesApi } from '../api/activities'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
+import { useSoc } from '../soc/SocContext'
 import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatMoney } from '../lib/format'
@@ -28,17 +29,17 @@ const emptyForm: FormState = {
 
 export function Activities() {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const { selectedSocId } = useSoc()
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const workingSocId = selectedSocId ?? user?.socId ?? null
 
   const { data, loading, error, reload, setData } = useAsync(
-    () => activitiesApi.findAll(isAdmin ? undefined : user?.socId ? { socId: user.socId } : undefined),
-    [user?.socId, isAdmin],
+    () => (workingSocId ? activitiesApi.findAll({ socId: workingSocId }) : activitiesApi.findAll()),
+    [workingSocId],
   )
-  const typesSocId = user?.socId ?? null
   const { data: types, reload: reloadTypes } = useAsync(
-    () => (typesSocId ? activityTypesApi.findAll(typesSocId) : Promise.resolve([] as ActivityTypeDto[])),
-    [typesSocId],
+    () => (workingSocId ? activityTypesApi.findAll(workingSocId) : Promise.resolve([] as ActivityTypeDto[])),
+    [workingSocId],
   )
 
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -84,7 +85,7 @@ export function Activities() {
       setTypeError('Code et libellé sont obligatoires')
       return
     }
-    if (!typesSocId) {
+    if (!workingSocId) {
       setTypeError('Aucune société associée à votre compte')
       return
     }
@@ -92,7 +93,7 @@ export function Activities() {
     setTypeError(null)
     try {
       const body: ActivityTypeRequest = {
-        socId: typesSocId,
+        socId: workingSocId,
         code: typeForm.code.trim().toUpperCase(),
         labelFr: typeForm.labelFr.trim(),
         labelEn: typeForm.labelEn.trim() || null,
@@ -157,7 +158,7 @@ export function Activities() {
       setFormError('Nom et type sont obligatoires')
       return
     }
-    const socId = user?.socId ?? null
+    const socId = workingSocId
     if (!socId) {
       setFormError('Aucune société associée à votre compte')
       return
@@ -206,7 +207,7 @@ export function Activities() {
         actions={
           canEdit ? (
             <>
-              {user.socId && (
+              {workingSocId && (
                 <InlineButton onClick={openTypeCreate}>Gérer les types</InlineButton>
               )}
               <Button className="w-auto" onClick={openCreate}>

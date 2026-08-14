@@ -3,9 +3,12 @@ import { useAuth } from '../auth/AuthContext'
 import { suppliersApi } from '../api/suppliers'
 import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
+import type { CompanyLookup } from '../api/auth'
 import { useAsync } from '../lib/useAsync'
 import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
+import { useSoc } from '../soc/SocContext'
+import { socToCompanyLookup } from '../soc/socLookup'
 import type { SupplierDto } from '../api/types'
 
 interface FormState {
@@ -30,16 +33,31 @@ const emptyForm: FormState = {
   active: true,
 }
 
+function companyEmail(company: CompanyLookup): string {
+  const domain = domainOf(company.website || '')
+  return `contact@${domain || (company.name ?? '').toLowerCase().replace(/[^a-z0-9]/gi, '') || 'contact'}`
+}
+
+function domainOf(website: string): string {
+  try {
+    const host = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`).hostname
+    return host.replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
 export function Suppliers() {
   const { user } = useAuth()
+  const { selectedSocId } = useSoc()
   const isAdmin = user?.role === 'ADMIN'
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
-    () => suppliersApi.findAll(isAdmin ? undefined : user?.socId ?? undefined),
-    [user?.socId, isAdmin],
+    () => suppliersApi.findAll(selectedSocId ?? user?.socId ?? undefined),
+    [selectedSocId, user?.socId],
   )
-  const { data: socs } = useAsync(() => (isAdmin ? socsApi.findAll() : Promise.resolve([])), [isAdmin])
+  const { data: allSocs } = useAsync(() => socsApi.findAll(), [])
 
   const [editing, setEditing] = useState<SupplierDto | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -47,11 +65,32 @@ export function Suppliers() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  function applyCompany(company: CompanyLookup | null) {
+    if (!company) return
+    setForm((f) => ({
+      ...f,
+      name: company.name?.trim() || f.name,
+      contactName: company.gerant?.trim() || f.contactName,
+      contactEmail: companyEmail(company),
+      contactPhone: company.tel?.trim() || f.contactPhone,
+    }))
+  }
+
+  function selectSoc(socId: string) {
+    setForm((f) => ({ ...f, socId }))
+    if (!socId) return
+    const soc = (allSocs ?? []).find((e) => e.id === Number(socId))
+    applyCompany(soc ? socToCompanyLookup(soc) : null)
+  }
+
   function openCreate() {
-    setForm({ ...emptyForm, socId: isAdmin ? '' : String(user?.socId ?? '') })
+    setForm({ ...emptyForm, socId: isAdmin ? '' : String(selectedSocId ?? user?.socId ?? '') })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
+    if (!isAdmin && (selectedSocId ?? user?.socId)) {
+      void selectSoc(String(selectedSocId ?? user?.socId))
+    }
   }
 
   function openEdit(supplier: SupplierDto) {
@@ -61,7 +100,7 @@ export function Suppliers() {
       contactEmail: supplier.contactEmail ?? '',
       contactPhone: supplier.contactPhone ?? '',
       notes: supplier.notes ?? '',
-      socId: String(supplier.soc?.id ?? user?.socId ?? ''),
+      socId: String(supplier.soc?.id ?? selectedSocId ?? user?.socId ?? ''),
       socParentId: String(supplier.socParent?.id ?? ''),
       active: supplier.active,
     })
@@ -80,6 +119,10 @@ export function Suppliers() {
       setFormError('Sélectionnez la société')
       return
     }
+    if (!isAdmin && !form.socId) {
+      setFormError('Sélectionnez une société')
+      return
+    }
     setSubmitting(true)
     setFormError(null)
     try {
@@ -89,7 +132,7 @@ export function Suppliers() {
         contactEmail: form.contactEmail || null,
         contactPhone: form.contactPhone || null,
         notes: form.notes.trim() || null,
-        socId: isAdmin ? Number(form.socId) : user?.socId ?? undefined,
+        socId: Number(form.socId),
         socParentId: form.socParentId ? Number(form.socParentId) : null,
         active: form.active,
       }
@@ -230,6 +273,29 @@ export function Suppliers() {
               {formError}
             </div>
           )}
+          {isAdmin ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Société">
+                <Select value={form.socId} onChange={(e) => void selectSoc(e.target.value)}>
+                  <option value="">Sélectionner…</option>
+                  {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
+                </Select>
+              </Field>
+              <Field label="Société parent">
+                <Select value={form.socParentId} onChange={(e) => setForm({ ...form, socParentId: e.target.value })}>
+                  <option value="">Aucune</option>
+                  {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
+                </Select>
+              </Field>
+            </div>
+          ) : (
+            <Field label="Société associée *">
+              <Select value={form.socId} onChange={(e) => void selectSoc(e.target.value)}>
+                <option value="">Sélectionner…</option>
+                {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
+              </Select>
+            </Field>
+          )}
           <Field label="Nom du fournisseur *">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
@@ -262,22 +328,6 @@ export function Suppliers() {
               onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
             />
           </Field>
-          {isAdmin && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Société">
-                <Select value={form.socId} onChange={(e) => setForm({ ...form, socId: e.target.value })}>
-                  <option value="">Sélectionner…</option>
-                  {(socs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
-                </Select>
-              </Field>
-              <Field label="Société parent">
-                <Select value={form.socParentId} onChange={(e) => setForm({ ...form, socParentId: e.target.value })}>
-                  <option value="">Aucune</option>
-                  {(socs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
-                </Select>
-              </Field>
-            </div>
-          )}
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
               type="checkbox"

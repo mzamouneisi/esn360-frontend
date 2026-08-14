@@ -122,7 +122,8 @@ const router = createBrowserRouter(
             { path: '/profil', element: <Profile /> },
             { path: '/change-password', element: <ChangePassword /> },
             { path: '/utilisateurs', element: <Users /> },
-            { path: '/soc', element: <SocAdmin /> },
+            { path: '/soc', element: <SocAdmin scope="mine" /> },
+            { path: '/soc/toutes', element: <SocAdmin scope="all" /> },
             {
               path: '/tables',
               element: (

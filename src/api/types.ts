@@ -51,6 +51,7 @@ export interface AddSocPayload {
   zipCode?: string | null
   city?: string | null
   country?: string | null
+  mine?: boolean
 }
 
 export interface UserDto {
@@ -109,6 +110,8 @@ export interface SocDto {
   urssaf?: string | null
   gerant?: string | null
   categorieEntreprise?: string | null
+  dateCreation?: string | null
+  dateFermeture?: string | null
   website?: string | null
   address?: Address | null
 }

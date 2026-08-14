@@ -85,9 +85,6 @@ export function Register() {
       const companies = await authApi.searchSoc(socName.trim() || undefined, siret.trim() || undefined)
       if (companies.length !== 1) {
         setSearchResults(companies)
-        if (companies.length === 0 && socName.trim()) {
-          setWebsite(fallbackWebsite(socName))
-        }
         return
       }
       const company = companies[0]
@@ -100,7 +97,7 @@ export function Register() {
          generatedUsername = updateAdministrator(company.gerant)
        }
       if (company.codeNaf) setCodeNaf(company.codeNaf)
-       const companyWebsite = ensureHttps(company.website || fallbackWebsite(company.name || socName))
+const companyWebsite = ensureHttps(company.website)
        setWebsite(companyWebsite)
        setEmail(buildCompanyEmail(generatedUsername, companyWebsite))
       if (company.street) setStreet(company.street)
@@ -156,7 +153,7 @@ export function Register() {
        generatedUsername = updateAdministrator(company.gerant)
      }
     if (company.codeNaf) setCodeNaf(company.codeNaf)
-     const companyWebsite = ensureHttps(company.website || fallbackWebsite(company.name || socName))
+     const companyWebsite = ensureHttps(company.website)
      setWebsite(companyWebsite)
      setEmail(buildCompanyEmail(generatedUsername, companyWebsite))
     if (company.street) setStreet(company.street)
@@ -167,11 +164,6 @@ export function Register() {
     if (company.dateCreation) setDateCreation(company.dateCreation)
     if (company.dateFermeture) setDateFermeture(company.dateFermeture)
     setSearchResults([])
-  }
-
-  function fallbackWebsite(name: string): string {
-    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')
-    return `https://www.${slug || 'societe'}.com`
   }
 
   function ensureHttps(value: string | null | undefined): string {

@@ -1,5 +1,20 @@
 import { api } from './client'
-import type { SocDetailDto, SocDto } from './types'
+import type { Address, SocDetailDto, SocDto } from './types'
+
+export interface SocRequest {
+  name: string
+  description?: string | null
+  infosWeb?: string | null
+  siret?: string | null
+  codeNaf?: string | null
+  urssaf?: string | null
+  gerant?: string | null
+  categorieEntreprise?: string | null
+  dateCreation?: string | null
+  dateFermeture?: string | null
+  website?: string | null
+  address?: Address | null
+}
 
 export interface SocDependency {
   type: string
@@ -10,6 +25,7 @@ export interface SocDependency {
 export const socsApi = {
   findAll: () => api.get<SocDto[]>('/socs'),
   getById: (id: number) => api.get<SocDetailDto>(`/socs/${id}`),
+  create: (request: SocRequest) => api.post<SocDto>('/socs', request),
   update: (id: number, request: Partial<SocDto>) =>
     api.put<SocDto>(`/socs/${id}`, request),
   remove: (id: number) => api.delete<void>(`/socs/${id}`),
