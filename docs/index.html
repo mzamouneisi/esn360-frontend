@@ -10,11 +10,16 @@
         var redirect = sessionStorage.getItem('soc360.redirect')
         if (redirect) {
           sessionStorage.removeItem('soc360.redirect')
+          try {
+            var url = new URL(redirect, window.location.href)
+            url.pathname = url.pathname.replace(/\/{2,}/g, '/')
+            redirect = url.href
+          } catch (e) {}
           window.history.replaceState(null, '', redirect)
         }
       })()
     </script>
-    <script type="module" crossorigin src="/soc360-front-react/assets/index-CbBOZ9eY.js"></script>
+    <script type="module" crossorigin src="/soc360-front-react/assets/index-Bwo8k3cT.js"></script>
     <link rel="stylesheet" crossorigin href="/soc360-front-react/assets/index-RAZjQ7iE.css">
   </head>
   <body>
