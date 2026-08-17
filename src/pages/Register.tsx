@@ -179,9 +179,18 @@ const companyWebsite = ensureHttps(company.website)
     const lastName = parts.slice(1).join(' ')
     setAdminFirstName(firstName)
     setAdminLastName(lastName)
-    const generatedUsername = `${firstName[0]}${lastName.replace(/\s+/g, '')}`.toLowerCase()
+    const generatedUsername = sanitizeUsername(`${firstName[0]}${lastName}`)
     setUsername(generatedUsername)
     return generatedUsername
+  }
+
+  function sanitizeUsername(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9_.-]/g, '')
+      .slice(0, 50)
   }
 
   function buildCompanyEmail(currentUsername: string, site: string): string {
