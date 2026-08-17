@@ -12,8 +12,10 @@ export const activitiesApi = {
 }
 
 export const activityTypesApi = {
-  findAll: (socId: number) => api.get<ActivityTypeDto[]>('/activity-types', { socId }),
+  findAll: (socId: number, opts?: { all?: boolean }) =>
+    api.get<ActivityTypeDto[]>('/activity-types', { socId, all: opts?.all }),
   create: (body: ActivityTypeRequest) => api.post<ActivityTypeDto>('/activity-types', body),
   update: (id: number, body: ActivityTypeRequest) =>
     api.put<ActivityTypeDto>(`/activity-types/${id}`, body),
+  delete: (id: number) => api.delete<void>(`/activity-types/${id}`),
 }

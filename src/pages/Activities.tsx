@@ -1,20 +1,24 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { activitiesApi, activityTypesApi } from '../api/activities'
+import { projectsApi } from '../api/projects'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { useSoc } from '../soc/SocContext'
 import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatMoney } from '../lib/format'
-import type { ActivityDto, ActivityTypeDto, ActivityTypeRequest } from '../api/types'
+import type { ActivityDto, ActivityTypeDto, ProjectDto } from '../api/types'
 
 interface FormState {
   name: string
   description: string
   price: string
   currency: string
+  startDate: string
+  endDate: string
   typeId: string
+  projectId: string
   active: boolean
 }
 
@@ -23,7 +27,10 @@ const emptyForm: FormState = {
   description: '',
   price: '',
   currency: 'EUR',
+  startDate: '',
+  endDate: '',
   typeId: '',
+  projectId: '',
   active: true,
 }
 
@@ -37,8 +44,12 @@ export function Activities() {
     () => (workingSocId ? activitiesApi.findAll({ socId: workingSocId }) : activitiesApi.findAll()),
     [workingSocId],
   )
-  const { data: types, reload: reloadTypes } = useAsync(
+  const { data: types } = useAsync(
     () => (workingSocId ? activityTypesApi.findAll(workingSocId) : Promise.resolve([] as ActivityTypeDto[])),
+    [workingSocId],
+  )
+  const { data: projects } = useAsync(
+    () => (workingSocId ? projectsApi.findAll({ socId: workingSocId }) : Promise.resolve([] as ProjectDto[])),
     [workingSocId],
   )
 
@@ -48,88 +59,7 @@ export function Activities() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const [typesOpen, setTypesOpen] = useState(false)
-  const [typeForm, setTypeForm] = useState<{
-    id: number | null
-    code: string
-    labelFr: string
-    labelEn: string
-    color: string
-  }>({ id: null, code: '', labelFr: '', labelEn: '', color: '#3b82f6' })
-  const [typeError, setTypeError] = useState<string | null>(null)
-  const [typeSubmitting, setTypeSubmitting] = useState(false)
-
   if (!user) return null
-
-  function openTypeCreate() {
-    setTypeForm({ id: null, code: '', labelFr: '', labelEn: '', color: '#3b82f6' })
-    setTypeError(null)
-    setTypesOpen(true)
-  }
-
-  function openTypeEdit(t: ActivityTypeDto) {
-    setTypeForm({
-      id: t.id,
-      code: t.code,
-      labelFr: t.labelFr,
-      labelEn: t.labelEn ?? '',
-      color: t.color ?? '#3b82f6',
-    })
-    setTypeError(null)
-    setTypesOpen(true)
-  }
-
-  async function handleTypeSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!typeForm.code.trim() || !typeForm.labelFr.trim()) {
-      setTypeError('Code et libellé sont obligatoires')
-      return
-    }
-    if (!workingSocId) {
-      setTypeError('Aucune société associée à votre compte')
-      return
-    }
-    setTypeSubmitting(true)
-    setTypeError(null)
-    try {
-      const body: ActivityTypeRequest = {
-        socId: workingSocId,
-        code: typeForm.code.trim().toUpperCase(),
-        labelFr: typeForm.labelFr.trim(),
-        labelEn: typeForm.labelEn.trim() || null,
-        color: typeForm.color || null,
-        active: true,
-      }
-      if (typeForm.id != null) {
-        await activityTypesApi.update(typeForm.id, body)
-      } else {
-        await activityTypesApi.create(body)
-      }
-      setTypesOpen(false)
-      await reloadTypes()
-    } catch (err) {
-      setTypeError(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    } finally {
-      setTypeSubmitting(false)
-    }
-  }
-
-  async function handleTypeDeactivate(t: ActivityTypeDto) {
-    if (!window.confirm(`Désactiver le type « ${t.labelFr} » ?`)) return
-    try {
-      await activityTypesApi.update(t.id, {
-        socId: t.socId,
-        code: t.code,
-        labelFr: t.labelFr,
-        labelEn: t.labelEn ?? null,
-        color: t.color ?? null,
-        active: false,
-      })
-      await reloadTypes()
-    } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    }
-  }
 
   function openCreate() {
     setForm({ ...emptyForm, typeId: types?.[0] ? String(types[0].id) : '' })
@@ -144,7 +74,10 @@ export function Activities() {
       description: activity.description ?? '',
       price: String(activity.price),
       currency: activity.currency || 'EUR',
+      startDate: activity.startDate ?? '',
+      endDate: activity.endDate ?? '',
       typeId: activity.type ? String(activity.type.id) : '',
+      projectId: activity.project ? String(activity.project.id) : '',
       active: activity.active,
     })
     setEditing(activity)
@@ -154,8 +87,12 @@ export function Activities() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!form.name.trim() || !form.typeId) {
-      setFormError('Nom et type sont obligatoires')
+    if (!form.name.trim() || !form.typeId || !form.projectId) {
+      setFormError('Nom, type et projet sont obligatoires')
+      return
+    }
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      setFormError('La date de fin ne peut pas précéder la date de début')
       return
     }
     const socId = workingSocId
@@ -171,7 +108,10 @@ export function Activities() {
         description: form.description || null,
         price: Number(form.price) || 0,
         currency: form.currency || 'EUR',
+        startDate: form.startDate || null,
+        endDate: form.endDate || null,
         typeId: Number(form.typeId),
+        projectId: Number(form.projectId),
         socId,
         active: form.active,
       }
@@ -206,14 +146,9 @@ export function Activities() {
         subtitle="Prestations facturables utilisées dans les CRA"
         actions={
           canEdit ? (
-            <>
-              {workingSocId && (
-                <InlineButton onClick={openTypeCreate}>Gérer les types</InlineButton>
-              )}
-              <Button className="w-auto" onClick={openCreate}>
-                + Nouvelle activité
-              </Button>
-            </>
+            <Button className="w-auto" onClick={openCreate}>
+              + Nouvelle activité
+            </Button>
           ) : undefined
         }
       />
@@ -256,6 +191,28 @@ export function Activities() {
               key: 'type',
               label: 'Type',
               render: (a) => <Badge kind="info">{a.type?.labelFr ?? '—'}</Badge>,
+            },
+            {
+              key: 'project',
+              label: 'Projet',
+              render: (a) => (
+                <div>
+                  <p className="font-medium text-gray-900">{a.project?.name ?? '—'}</p>
+                  {a.project?.clientName && (
+                    <p className="text-xs text-gray-500">{a.project.clientName}</p>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'dates',
+              label: 'Période',
+              render: (a) => (
+                <span className="text-gray-600">
+                  {a.startDate ? a.startDate : '—'}
+                  {a.endDate ? ` → ${a.endDate}` : a.startDate ? ' →' : ''}
+                </span>
+              ),
             },
             {
               key: 'price',
@@ -351,6 +308,20 @@ export function Activities() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </Field>
+          <Field label="Projet *">
+            <Select
+              value={form.projectId}
+              onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+            >
+              <option value="">Sélectionner…</option>
+              {(projects ?? []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.client?.name ? ` — ${p.client.name}` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label="Type *">
               <Select value={form.typeId} onChange={(e) => setForm({ ...form, typeId: e.target.value })}>
@@ -383,6 +354,22 @@ export function Activities() {
               </Select>
             </Field>
           </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Date de début">
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Date de fin (optionnelle)">
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+              />
+            </Field>
+          </div>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
               type="checkbox"
@@ -392,103 +379,6 @@ export function Activities() {
             />
             Activité active
           </label>
-        </form>
-      </Modal>
-
-      <Modal
-        open={typesOpen}
-        onClose={() => setTypesOpen(false)}
-        title={typeForm.id != null ? 'Modifier le type' : 'Types d\u2019activités'}
-        footer={
-          <>
-            <InlineButton onClick={() => setTypesOpen(false)}>Fermer</InlineButton>
-            <Button
-              className="w-auto"
-              onClick={typeForm.id != null ? (handleTypeSubmit as never) : openTypeCreate}
-              disabled={typeSubmitting}
-            >
-              {typeSubmitting ? <Spinner className="border-white border-t-transparent" /> : null}
-              {typeForm.id != null ? 'Enregistrer' : 'Ajouter'}
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleTypeSubmit} className="space-y-4">
-          {typeError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {typeError}
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Code *">
-              <Input
-                value={typeForm.code}
-                onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value })}
-                placeholder="DEV"
-              />
-            </Field>
-            <Field label="Libellé (FR) *">
-              <Input
-                value={typeForm.labelFr}
-                onChange={(e) => setTypeForm({ ...typeForm, labelFr: e.target.value })}
-                placeholder="Développement"
-              />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Libellé (EN)">
-              <Input
-                value={typeForm.labelEn}
-                onChange={(e) => setTypeForm({ ...typeForm, labelEn: e.target.value })}
-                placeholder="Development"
-              />
-            </Field>
-            <Field label="Couleur">
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={typeForm.color}
-                  onChange={(e) => setTypeForm({ ...typeForm, color: e.target.value })}
-                  className="h-9 w-12 cursor-pointer rounded border border-gray-300"
-                />
-                <Input
-                  value={typeForm.color}
-                  onChange={(e) => setTypeForm({ ...typeForm, color: e.target.value })}
-                  className="max-w-[8rem]"
-                />
-              </div>
-            </Field>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-medium text-gray-700">Types existants</p>
-            {!types || types.length === 0 ? (
-              <p className="text-sm text-gray-500">Aucun type pour cette société.</p>
-            ) : (
-              <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                {(types ?? []).map((t) => (
-                  <li key={t.id} className="flex items-center justify-between px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: t.color ?? '#94a3b8' }}
-                      />
-                      <span className="text-sm font-medium text-gray-900">{t.labelFr}</span>
-                      <span className="text-xs text-gray-400">{t.code}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <InlineButton onClick={() => openTypeEdit(t)}>Modifier</InlineButton>
-                      <InlineButton
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={() => handleTypeDeactivate(t)}
-                      >
-                        Désactiver
-                      </InlineButton>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
         </form>
       </Modal>
     </div>

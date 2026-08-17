@@ -24,6 +24,7 @@ const HIDDEN_FOR_CONSULTANT = new Set([
   '/missions',
   '/consultants',
   '/activites',
+  '/types-activites',
   '/facturation',
 ])
 
@@ -102,9 +103,10 @@ export function MainLayout() {
         { to: '/clients', label: 'Clients', icon: ICONS.clients },
         { to: '/fournisseurs', label: 'Fournisseurs', icon: ICONS.suppliers },
         { to: '/projets', label: 'Projets', icon: ICONS.projects },
-        { to: '/missions', label: 'Missions', icon: ICONS.missions },
-        { to: '/consultants', label: 'Consultants', icon: ICONS.consultants },
+        { to: '/types-activites', label: 'Types d’activités', icon: ICONS.activities },
         { to: '/activites', label: 'Activités & tarifs', icon: ICONS.activities },
+        { to: '/consultants', label: 'Consultants', icon: ICONS.consultants },
+        { to: '/missions', label: 'Missions', icon: ICONS.missions },
       ],
     },
     {
@@ -178,6 +180,9 @@ export function MainLayout() {
             </svg>
             Profil
           </NavLink>
+          <p className="mt-2 text-center text-[20px] text-gray-500">
+            Déploiement : {__BUILD_DATE__}
+          </p>
         </div>
       </aside>
 

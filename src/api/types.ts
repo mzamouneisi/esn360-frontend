@@ -292,7 +292,10 @@ export interface ActivityDto {
   description: string | null
   price: number
   currency: string
+  startDate: string | null
+  endDate: string | null
   type?: { id: number; code: string; labelFr: string; color?: string | null } | null
+  project?: { id: number; name: string; clientName?: string | null } | null
   soc?: { id: number; name: string } | null
   active: boolean
 }
@@ -302,7 +305,10 @@ export interface ActivityRequest {
   description?: string | null
   price: number
   currency?: string | null
+  startDate?: string | null
+  endDate?: string | null
   typeId: number
+  projectId?: number | null
   socId: number
   active: boolean
 }

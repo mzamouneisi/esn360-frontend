@@ -18,6 +18,7 @@ import { Projects } from './pages/Projects'
 import { Missions } from './pages/Missions'
 import { Consultants } from './pages/Consultants'
 import { Activities } from './pages/Activities'
+import { ActivityTypes } from './pages/ActivityTypes'
 import { CraList } from './pages/CraList'
 import { CraDetail } from './pages/CraDetail'
 import { NoteFraisList } from './pages/NoteFraisList'
@@ -101,6 +102,14 @@ const router = createBrowserRouter(
               element: (
                 <NotConsultantRoute>
                   <Activities />
+                </NotConsultantRoute>
+              ),
+            },
+            {
+              path: '/types-activites',
+              element: (
+                <NotConsultantRoute>
+                  <ActivityTypes />
                 </NotConsultantRoute>
               ),
             },

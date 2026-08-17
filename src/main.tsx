@@ -5,12 +5,6 @@ import App from './App'
 import { AuthProvider } from './auth/AuthContext'
 import { SocProvider } from './soc/SocContext'
 
-const redirect = sessionStorage.getItem('soc360.redirect')
-if (redirect) {
-  sessionStorage.removeItem('soc360.redirect')
-  window.history.replaceState(null, '', redirect)
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>

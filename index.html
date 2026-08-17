@@ -5,6 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SOC360</title>
+    <script>
+      ;(function () {
+        var redirect = sessionStorage.getItem('soc360.redirect')
+        if (redirect) {
+          sessionStorage.removeItem('soc360.redirect')
+          try {
+            var url = new URL(redirect, window.location.href)
+            url.pathname = url.pathname.replace(/\/{2,}/g, '/')
+            redirect = url.href
+          } catch (e) {}
+          window.history.replaceState(null, '', redirect)
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -6,9 +6,13 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const buildDate = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
   return {
     plugins: [react(), tailwindcss()],
     base: env.VITE_BASE_PATH || '/',
+    define: {
+      __BUILD_DATE__: JSON.stringify(buildDate),
+    },
     server: {
       port: 5173,
       proxy: {
