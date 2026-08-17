@@ -60,8 +60,8 @@ export const authApi = {
     api.post<EmailSentResponse>('/auth/register-soc', payload),
   searchSoc: (name?: string, siret?: string) =>
     api.get<CompanyLookup[]>('/auth/search-soc', { name, siret }),
-  verifyEmail: (token: string) =>
-    api.post<AuthResponse>('/auth/verify-email', { token }),
+  verifyEmail: (token: string, currentPassword: string, newPassword: string) =>
+    api.post<AuthResponse>('/auth/verify-email', { token, currentPassword, newPassword }),
   resendVerification: (email: string) =>
     api.post<EmailSentResponse>('/auth/resend-verification', { email }),
   forgotPassword: (email: string) =>

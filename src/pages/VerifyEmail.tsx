@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -12,36 +12,43 @@ export function VerifyEmail() {
   const navigate = useNavigate()
   const { setUser } = useAuth()
 
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resendEmail, setResendEmail] = useState('')
   const [resendMessage, setResendMessage] = useState<string | null>(null)
   const [resending, setResending] = useState(false)
-  const ran = useRef(false)
 
-  useEffect(() => {
-    if (ran.current) return
-    ran.current = true
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
 
     if (!token) {
-      setStatus('error')
       setError('Lien de validation invalide ou incomplet.')
       return
     }
 
-    authApi
-      .verifyEmail(token)
-      .then((response) => {
-        setToken(response.token)
-        setUser(response.user)
-        setStatus('success')
-        setTimeout(() => navigate('/', { replace: true }), 1500)
-      })
-      .catch((err) => {
-        setStatus('error')
-        setError(err instanceof ApiError ? err.message : 'Erreur inattendue')
-      })
-  }, [token, navigate, setUser])
+    if (newPassword !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const response = await authApi.verifyEmail(token, currentPassword, newPassword)
+      setToken(response.token)
+      setUser(response.user)
+      setSuccess(true)
+      setTimeout(() => navigate('/', { replace: true }), 1500)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   async function handleResend(e: FormEvent) {
     e.preventDefault()
@@ -66,61 +73,98 @@ export function VerifyEmail() {
             E
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Validation de l'inscription</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Confirmez votre mot de passe et choisissez-en un nouveau pour activer votre compte
+          </p>
         </div>
 
-        {status === 'loading' && (
-          <div className="flex flex-col items-center gap-3 py-4 text-sm text-gray-500">
-            <Spinner />
-            Validation de votre adresse email…
-          </div>
-        )}
-
-        {status === 'success' && (
+        {success && (
           <Alert variant="success">
-            Votre adresse email a été validée. Votre compte est activé, redirection…
+            Votre inscription est validée. Votre compte est activé, redirection…
           </Alert>
         )}
 
-        {status === 'error' && (
-          <>
-            {error && (
-              <div className="mb-4">
-                <Alert>{error}</Alert>
-              </div>
-            )}
-
-            {resendMessage && (
-              <div className="mb-4">
-                <Alert variant="success">{resendMessage}</Alert>
-              </div>
-            )}
-
-            <form onSubmit={handleResend} className="space-y-4">
-              <Field label="Adresse e-mail utilisée à l'inscription">
-                <Input
-                  type="email"
-                  value={resendEmail}
-                  onChange={(e) => setResendEmail(e.target.value)}
-                  required
-                  placeholder="marie.durand@exemple.fr"
-                />
-              </Field>
-              <Button type="submit" disabled={resending}>
-                {resending ? <Spinner className="border-white border-t-transparent" /> : null}
-                Renvoyer l'email de validation
-              </Button>
-            </form>
-
-            <p className="mt-6 text-center text-sm text-gray-600">
-              <Link
-                to="/login"
-                className="font-medium text-brand-600 hover:text-brand-700"
-              >
-                Aller à la connexion
-              </Link>
-            </p>
-          </>
+        {error && (
+          <div className="mb-4">
+            <Alert>{error}</Alert>
+          </div>
         )}
+
+        {!token && (
+          <div className="mb-4">
+            <Alert>Le lien de validation est invalide ou incomplet.</Alert>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Mot de passe actuel (utilisé à l'inscription)">
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              disabled={success || !token}
+              placeholder="••••••••"
+            />
+          </Field>
+
+          <Field label="Nouveau mot de passe">
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              disabled={success || !token}
+              placeholder="••••••••"
+            />
+          </Field>
+
+          <Field label="Confirmer le nouveau mot de passe">
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              disabled={success || !token}
+              placeholder="••••••••"
+            />
+          </Field>
+
+          <Button type="submit" disabled={submitting || success || !token}>
+            {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+            Valider mon inscription
+          </Button>
+        </form>
+
+        <div className="mt-6">
+          <p className="text-sm font-medium text-gray-700">Lien expiré ? Renvoyez un email :</p>
+          <form onSubmit={handleResend} className="mt-2 space-y-2">
+            <Input
+              type="email"
+              value={resendEmail}
+              onChange={(e) => setResendEmail(e.target.value)}
+              required
+              placeholder="marie.durand@exemple.fr"
+            />
+            {resendMessage && <Alert variant="success">{resendMessage}</Alert>}
+            <Button type="submit" className="!w-auto !bg-gray-100 !text-gray-700 hover:!bg-gray-200" disabled={resending}>
+              {resending ? <Spinner /> : null}
+              Renvoyer l'email de validation
+            </Button>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-gray-600">
+          <Link
+            to="/login"
+            className="font-medium text-brand-600 hover:text-brand-700"
+          >
+            Aller à la connexion
+          </Link>
+        </p>
       </Card>
     </div>
   )

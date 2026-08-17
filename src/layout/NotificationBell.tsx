@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { notificationsApi } from '../api/notifications'
 import { useAuth } from '../auth/AuthContext'
-import { formatDateTime, statusBadge } from '../lib/format'
 import { Badge } from '../components/data'
+import { formatDateTime, statusBadge } from '../lib/format'
 
 export function NotificationBell() {
   const { user } = useAuth()

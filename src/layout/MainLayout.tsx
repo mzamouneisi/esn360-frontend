@@ -1,9 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
-import { NotificationBell } from './NotificationBell'
-import { SocSelector } from '../soc/SocSelector'
-import { ROLE_LABELS, initials } from '../lib/format'
 import type { Role } from '../api/types'
+import { useAuth } from '../auth/AuthContext'
+import { ROLE_LABELS, initials } from '../lib/format'
+import { SocSelector } from '../soc/SocSelector'
+import { NotificationBell } from './NotificationBell'
 
 interface NavItem {
   to: string
@@ -132,7 +132,7 @@ export function MainLayout() {
   ]
 
   if (user.role === 'ADMIN' || user.role === 'RESPONSIBLE_SOC') {
-    sections.unshift({
+    sections.splice(1, 0, {
       title: 'Sociétés',
       items: [
         { to: '/soc', label: 'Mes sociétés', icon: ICONS.soc, end: true },
