@@ -2,7 +2,7 @@ import { api } from './client'
 import type { ActivityDto, ActivityRequest, ActivityTypeDto, ActivityTypeRequest } from './types'
 
 export const activitiesApi = {
-  findAll: (params?: { socId?: number; typeId?: number }) =>
+  findAll: (params?: { socId?: number; typeId?: number; consultantId?: number }) =>
     api.get<ActivityDto[]>('/activities', params),
   getById: (id: number) => api.get<ActivityDto>(`/activities/${id}`),
   create: (request: ActivityRequest) => api.post<ActivityDto>('/activities', request),

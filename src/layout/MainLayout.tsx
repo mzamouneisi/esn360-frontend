@@ -129,6 +129,7 @@ export function MainLayout() {
         { to: '/documents', label: 'Documents', icon: ICONS.documents },
         { to: '/messages', label: 'Messages', icon: ICONS.messages },
         { to: '/support', label: 'Support', icon: ICONS.support },
+        { to: '/parametres', label: 'Paramètres', icon: ICONS.support },
       ],
     },
   ]

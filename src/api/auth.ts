@@ -71,6 +71,8 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<void>('/auth/change-password', { currentPassword, newPassword }),
   me: () => api.get<UserDto>('/auth/me'),
+  updateFontSize: (fontSize: number) =>
+    api.put<UserDto>('/auth/me/font-size', { fontSize }),
   mySocs: () => api.get<SocLiteDto[]>('/auth/me/socs'),
   addSoc: (payload: AddSocPayload) =>
     api.post<SocLiteDto>('/auth/me/socs', payload),

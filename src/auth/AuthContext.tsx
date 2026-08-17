@@ -28,6 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState(true)
 
   useEffect(() => {
+    const doc = document.documentElement
+    doc.style.fontSize = `${user?.fontSize && user.fontSize > 0 ? user.fontSize : 14}px`
+  }, [user?.fontSize])
+
+  useEffect(() => {
     setUnauthorizedHandler(() => {
       setUser(null)
     })

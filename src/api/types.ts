@@ -68,6 +68,7 @@ export interface UserDto {
   consultantId: number | null
   mustChangePassword: boolean
   lastLoginAt: string | null
+  fontSize: number
 }
 
 export interface AuthResponse {
@@ -296,6 +297,7 @@ export interface ActivityDto {
   endDate: string | null
   type?: { id: number; code: string; labelFr: string; color?: string | null } | null
   project?: { id: number; name: string; clientName?: string | null } | null
+  consultant?: { id: number; firstName: string; lastName: string } | null
   soc?: { id: number; name: string } | null
   active: boolean
 }
@@ -309,6 +311,7 @@ export interface ActivityRequest {
   endDate?: string | null
   typeId: number
   projectId?: number | null
+  consultantId?: number | null
   socId: number
   active: boolean
 }
@@ -319,6 +322,7 @@ export interface CraDayActivityDto {
   activityName: string
   activityColor: string | null
   hours: number
+  days: number
   comment: string | null
 }
 
@@ -349,7 +353,8 @@ export interface CraDto {
 
 export interface CraDayActivityRequest {
   activityId: number
-  hours: number
+  hours?: number | null
+  days?: number | null
   comment?: string | null
 }
 

@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { activitiesApi, activityTypesApi } from '../api/activities'
 import { projectsApi } from '../api/projects'
+import { consultantsApi } from '../api/consultants'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { useSoc } from '../soc/SocContext'
 import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatMoney } from '../lib/format'
-import type { ActivityDto, ActivityTypeDto, ProjectDto } from '../api/types'
+import type { ActivityDto, ActivityTypeDto, ProjectDto, ConsultantSummary } from '../api/types'
 
 interface FormState {
   name: string
@@ -19,6 +20,7 @@ interface FormState {
   endDate: string
   typeId: string
   projectId: string
+  consultantId: string
   active: boolean
 }
 
@@ -31,13 +33,15 @@ const emptyForm: FormState = {
   endDate: '',
   typeId: '',
   projectId: '',
+  consultantId: '',
   active: true,
 }
 
 export function Activities() {
   const { user } = useAuth()
   const { selectedSocId } = useSoc()
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const canEdit =
+    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
   const workingSocId = selectedSocId ?? user?.socId ?? null
 
   const { data, loading, error, reload, setData } = useAsync(
@@ -50,6 +54,10 @@ export function Activities() {
   )
   const { data: projects } = useAsync(
     () => (workingSocId ? projectsApi.findAll({ socId: workingSocId }) : Promise.resolve([] as ProjectDto[])),
+    [workingSocId],
+  )
+  const { data: consultants } = useAsync(
+    () => (workingSocId ? consultantsApi.summaries(workingSocId) : Promise.resolve([] as ConsultantSummary[])),
     [workingSocId],
   )
 
@@ -78,6 +86,7 @@ export function Activities() {
       endDate: activity.endDate ?? '',
       typeId: activity.type ? String(activity.type.id) : '',
       projectId: activity.project ? String(activity.project.id) : '',
+      consultantId: activity.consultant ? String(activity.consultant.id) : '',
       active: activity.active,
     })
     setEditing(activity)
@@ -112,6 +121,7 @@ export function Activities() {
         endDate: form.endDate || null,
         typeId: Number(form.typeId),
         projectId: Number(form.projectId),
+        consultantId: form.consultantId ? Number(form.consultantId) : null,
         socId,
         active: form.active,
       }
@@ -202,6 +212,17 @@ export function Activities() {
                     <p className="text-xs text-gray-500">{a.project.clientName}</p>
                   )}
                 </div>
+              ),
+            },
+            {
+              key: 'consultant',
+              label: 'Consultant',
+              render: (a) => (
+                <span className="text-gray-700">
+                  {a.consultant
+                    ? `${a.consultant.firstName} ${a.consultant.lastName}`
+                    : '—'}
+                </span>
               ),
             },
             {
@@ -355,6 +376,19 @@ export function Activities() {
             </Field>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Consultant">
+              <Select
+                value={form.consultantId}
+                onChange={(e) => setForm({ ...form, consultantId: e.target.value })}
+              >
+                <option value="">Aucun</option>
+                {(consultants ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             <Field label="Date de début">
               <Input
                 type="date"
