@@ -182,7 +182,7 @@ export function MainLayout() {
             Profil
           </NavLink>
           <p className="mt-2 text-center text-[20px] text-gray-500">
-            Déploiement : {__BUILD_DATE__}
+            Dernier commit : {__BUILD_DATE__}
           </p>
         </div>
       </aside>

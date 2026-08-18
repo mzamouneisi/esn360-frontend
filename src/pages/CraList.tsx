@@ -4,7 +4,7 @@ import { crasApi } from '../api/cras'
 import type { CraDto } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
-import { Button, Card, InlineButton, Select, Spinner } from '../components/ui'
+import { Button, Card, InlineButton, Input, Select, Spinner } from '../components/ui'
 import {
   CRA_STATUS_LABELS,
   MONTHS_FR,
@@ -29,6 +29,7 @@ export function CraList() {
   const [exporting, setExporting] = useState<null | 'csv' | 'pdf'>(null)
   const [page, setPage] = useState(0)
   const [openCraId, setOpenCraId] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
 
   const isConsultant = user?.role === 'CONSULTANT'
   const canValidate =
@@ -54,11 +55,18 @@ export function CraList() {
 
   useEffect(() => {
     setPage(0)
-  }, [year, month])
+  }, [year, month, search])
 
   if (!user) return null
 
-  const list = data ?? []
+  const list = (data ?? []).filter((c) => {
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    const yearMonth = `${c.year}-${String(c.month).padStart(2, '0')}`
+    const consultant = (c.consultantName ?? '').toLowerCase()
+    const status = (CRA_STATUS_LABELS[c.status] ?? c.status).toLowerCase()
+    return yearMonth.includes(q) || consultant.includes(q) || status.includes(q)
+  })
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages - 1)
   const pageItems = list.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
@@ -176,11 +184,27 @@ export function CraList() {
       {error && <ErrorBlock message={error} />}
       {loading && <LoadingBlock />}
 
+      {!loading && (
+        <div className="mb-4">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filtrer par année-mois, consultant ou statut…"
+          />
+        </div>
+      )}
+
       {!loading && list.length === 0 && (
         <Card className="flex flex-col items-center justify-center py-14">
-          <p className="text-sm font-medium text-gray-900">Aucun CRA pour cette année</p>
+          <p className="text-sm font-medium text-gray-900">
+            {search.trim() ? 'Aucun CRA ne correspond au filtre' : 'Aucun CRA pour cette année'}
+          </p>
           <p className="mt-1 text-sm text-gray-500">
-            {isConsultant ? 'Cliquez sur « Nouveau Cra » pour créer votre CRA.' : 'Aucun CRA saisi.'}
+            {search.trim()
+              ? 'Modifiez votre recherche.'
+              : isConsultant
+                ? 'Cliquez sur « Nouveau Cra » pour créer votre CRA.'
+                : 'Aucun CRA saisi.'}
           </p>
         </Card>
       )}
