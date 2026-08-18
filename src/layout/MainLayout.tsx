@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { Role } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
@@ -87,6 +88,27 @@ function NavSection({ section, role }: { section: NavSection; role: Role }) {
   )
 }
 
+function HorlogeNumerique() {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const date = now.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+  const time = now.toLocaleTimeString('fr-FR', { hour12: false })
+
+  return (
+    <div className="text-left">
+      <div className="font-mono text-lg font-semibold tracking-wider text-horloge">
+        {time}
+      </div>
+      <div className="text-xs text-gray-400">{date}</div>
+    </div>
+  )
+}
+
 export function MainLayout() {
   const { user, logout } = useAuth()
   if (!user) return null
@@ -168,8 +190,12 @@ export function MainLayout() {
           SOC360
         </div>
 
-        <p className="px-5 pb-2 text-xs text-gray-500">
-          Last Commit : {_LAST_COMMIT_}
+        <p id="_horloge_numerique" className="px-5 pb-3">
+          <HorlogeNumerique />
+        </p>
+
+        <p className="px-5 pb-2 text-gray-500 font_last_commit">
+          Last Commit : <br></br>{_LAST_COMMIT_}
         </p>
 
         <nav className="flex-1 space-y-0.5 px-3 pb-4">

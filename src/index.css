@@ -24,3 +24,12 @@ body {
   margin: 0;
   background-color: #f4f5f7;
 }
+
+.font_last_commit {
+  font-size: 14px;
+  color: azure;
+}
+
+.text-horloge {
+  color : aquamarine;
+}
