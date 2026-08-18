@@ -76,10 +76,10 @@ export function Suppliers() {
     }))
   }
 
-  function selectSoc(socId: string) {
-    setForm((f) => ({ ...f, socId }))
-    if (!socId) return
-    const soc = (allSocs ?? []).find((e) => e.id === Number(socId))
+  function selectCompany(field: 'socId' | 'socParentId', value: string) {
+    setForm((f) => ({ ...f, [field]: value }))
+    if (!value) return
+    const soc = (allSocs ?? []).find((e) => e.id === Number(value))
     applyCompany(soc ? socToCompanyLookup(soc) : null)
   }
 
@@ -88,9 +88,6 @@ export function Suppliers() {
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
-    if (!isAdmin && (selectedSocId ?? user?.socId)) {
-      void selectSoc(String(selectedSocId ?? user?.socId))
-    }
   }
 
   function openEdit(supplier: SupplierDto) {
@@ -206,8 +203,8 @@ export function Suppliers() {
             },
             {
               key: 'socParent',
-              label: 'Société parent',
-              render: (s) => (isAdmin ? <span>{s.socParent?.name ?? '—'}</span> : <span>—</span>),
+              label: isAdmin ? 'Société parent' : 'Société associée',
+              render: (c) => <span>{c.socParent?.name ?? '—'}</span>,
             },
             {
               key: 'notes',
@@ -276,7 +273,7 @@ export function Suppliers() {
           {isAdmin ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Société">
-                <Select value={form.socId} onChange={(e) => void selectSoc(e.target.value)}>
+                <Select value={form.socId} onChange={(e) => void selectCompany('socId', e.target.value)}>
                   <option value="">Sélectionner…</option>
                   {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
                 </Select>
@@ -289,9 +286,9 @@ export function Suppliers() {
               </Field>
             </div>
           ) : (
-            <Field label="Société associée *">
-              <Select value={form.socId} onChange={(e) => void selectSoc(e.target.value)}>
-                <option value="">Sélectionner…</option>
+            <Field label="Société associée">
+              <Select value={form.socParentId} onChange={(e) => void selectCompany('socParentId', e.target.value)}>
+                <option value="">Aucune</option>
                 {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
               </Select>
             </Field>
