@@ -145,8 +145,16 @@ export function CraDetail({
     [activities],
   )
 
-  const currentActivity = useMemo(() => {
+  const filteredActivities = useMemo(() => {
     const acts = activities ?? []
+    if (cra?.type === 'CONGE') {
+      return acts.filter((a) => a.type?.code?.startsWith('CONGE'))
+    }
+    return acts
+  }, [activities, cra?.type])
+
+  const currentActivity = useMemo(() => {
+    const acts = filteredActivities
     const today = new Date().toISOString().slice(0, 10)
     return (
       acts.find(
@@ -158,14 +166,14 @@ export function CraDetail({
       acts.find((a) => a.active) ??
       acts[0]
     )
-  }, [activities])
+  }, [filteredActivities])
 
   const monthActivities = useMemo(() => {
     if (!cra) return []
     const mm = String(cra.month).padStart(2, '0')
     const first = `${cra.year}-${mm}-01`
     const last = `${cra.year}-${mm}-${String(new Date(cra.year, cra.month, 0).getDate()).padStart(2, '0')}`
-    const acts = activities ?? []
+    const acts = filteredActivities
     const overlapsMonth = (a: ActivityDto) =>
       a.active &&
       (!a.startDate || a.startDate <= last) &&
@@ -175,7 +183,7 @@ export function CraDetail({
     )
     if (consultantMonth.length > 0) return consultantMonth
     return acts.filter(overlapsMonth)
-  }, [activities, cra])
+  }, [filteredActivities, cra])
 
   const incompleteDays = useMemo(
     () => days.filter((d) => !dayIsValid(d)),
@@ -657,7 +665,7 @@ export function CraDetail({
                                     }
                                   >
                                     <option value="">Activité…</option>
-                                    {(activities ?? []).map((a) => (
+                                    {filteredActivities.map((a) => (
                                       <option key={a.id} value={a.id}>
                                         {a.name}
                                       </option>
@@ -785,7 +793,7 @@ export function CraDetail({
         <EventModal
           day={days[eventModal]}
           editable={editable}
-          activities={activities ?? []}
+          activities={filteredActivities}
           onUpdate={(patch) => updateDay(eventModal, patch)}
           onUpdateActivity={(actIndex, patch) => updateActivity(eventModal, actIndex, patch)}
           onAddActivity={() => addActivity(eventModal)}
