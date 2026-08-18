@@ -49,7 +49,7 @@ function domainOf(website: string): string {
 
 export function Suppliers() {
   const { user } = useAuth()
-  const { selectedSocId } = useSoc()
+  const { selectedSocId, socs } = useSoc()
   const isAdmin = user?.role === 'ADMIN'
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
@@ -58,6 +58,7 @@ export function Suppliers() {
     [selectedSocId, user?.socId],
   )
   const { data: allSocs } = useAsync(() => socsApi.findAll(), [])
+  const parentSocs = isAdmin ? (allSocs ?? []) : (socs ?? [])
 
   const [editing, setEditing] = useState<SupplierDto | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -76,15 +77,15 @@ export function Suppliers() {
     }))
   }
 
-  function selectCompany(field: 'socId' | 'socParentId', value: string) {
-    setForm((f) => ({ ...f, [field]: value }))
+  function selectCompany(value: string) {
+    setForm((f) => ({ ...f, socId: value }))
     if (!value) return
     const soc = (allSocs ?? []).find((e) => e.id === Number(value))
     applyCompany(soc ? socToCompanyLookup(soc) : null)
   }
 
   function openCreate() {
-    setForm({ ...emptyForm, socId: isAdmin ? '' : String(selectedSocId ?? user?.socId ?? '') })
+    setForm({ ...emptyForm, socParentId: isAdmin ? '' : String(selectedSocId ?? user?.socId ?? '') })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
@@ -97,8 +98,8 @@ export function Suppliers() {
       contactEmail: supplier.contactEmail ?? '',
       contactPhone: supplier.contactPhone ?? '',
       notes: supplier.notes ?? '',
-      socId: String(supplier.soc?.id ?? selectedSocId ?? user?.socId ?? ''),
-      socParentId: String(supplier.socParent?.id ?? ''),
+      socId: String(supplier.soc?.id ?? ''),
+      socParentId: String(supplier.socParent?.id ?? (isAdmin ? '' : selectedSocId ?? user?.socId ?? '')),
       active: supplier.active,
     })
     setEditing(supplier)
@@ -112,12 +113,8 @@ export function Suppliers() {
       setFormError('Le nom du fournisseur est obligatoire')
       return
     }
-    if (isAdmin && !form.socId) {
-      setFormError('Sélectionnez la société')
-      return
-    }
-    if (!isAdmin && !form.socId) {
-      setFormError('Sélectionnez une société')
+    if (!form.socId) {
+      setFormError('Sélectionnez la société associée')
       return
     }
     setSubmitting(true)
@@ -202,13 +199,13 @@ export function Suppliers() {
             },
             {
               key: 'soc',
-              label: 'Société',
-              render: (s) => (isAdmin ? <span>{s.soc?.name ?? '—'}</span> : <span>—</span>),
+              label: 'Société associée',
+              render: (s) => <span>{s.soc?.name ?? '—'}</span>,
             },
             {
               key: 'socParent',
-              label: isAdmin ? 'Société parent' : 'Société associée',
-              render: (c) => <span>{c.socParent?.name ?? '—'}</span>,
+              label: 'Société parente',
+              render: (s) => <span>{s.socParent?.name ?? '—'}</span>,
             },
             {
               key: 'notes',
@@ -274,29 +271,20 @@ export function Suppliers() {
               {formError}
             </div>
           )}
-          {isAdmin ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Société">
-                <Select value={form.socId} onChange={(e) => void selectCompany('socId', e.target.value)}>
-                  <option value="">Sélectionner…</option>
-                  {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
-                </Select>
-              </Field>
-              <Field label="Société parent">
-                <Select value={form.socParentId} onChange={(e) => setForm({ ...form, socParentId: e.target.value })}>
-                  <option value="">Aucune</option>
-                  {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
-                </Select>
-              </Field>
-            </div>
-          ) : (
-            <Field label="Société associée">
-              <Select value={form.socParentId} onChange={(e) => void selectCompany('socParentId', e.target.value)}>
-                <option value="">Aucune</option>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Société associée *">
+              <Select value={form.socId} onChange={(e) => void selectCompany(e.target.value)}>
+                <option value="">Sélectionner…</option>
                 {(allSocs ?? []).map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
               </Select>
             </Field>
-          )}
+            <Field label={isAdmin ? 'Société parente' : 'Société parente (société de travail)'}>
+              <Select value={form.socParentId} onChange={(e) => setForm({ ...form, socParentId: e.target.value })}>
+                <option value="">Aucune</option>
+                {parentSocs.map((soc) => <option key={soc.id} value={soc.id}>{soc.name}</option>)}
+              </Select>
+            </Field>
+          </div>
           <Field label="Nom du fournisseur *">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
