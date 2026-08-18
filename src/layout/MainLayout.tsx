@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { ROLE_LABELS, initials } from '../lib/format'
 import { SocSelector } from '../soc/SocSelector'
 import { NotificationBell } from './NotificationBell'
+import { GlobalLoading } from '../components/GlobalLoading'
 
 interface NavItem {
   to: string
@@ -268,6 +269,7 @@ export function MainLayout() {
           <Outlet />
         </main>
       </div>
+      <GlobalLoading />
     </div>
   )
 }

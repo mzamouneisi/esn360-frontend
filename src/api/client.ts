@@ -39,6 +39,29 @@ export function getCurrentSocId(): number | null {
   return currentSocId
 }
 
+let activeRequests = 0
+let loadingListener: ((loading: boolean) => void) | null = null
+
+export function setLoadingListener(listener: ((loading: boolean) => void) | null): void {
+  loadingListener = listener
+}
+
+function isNotificationPath(path: string): boolean {
+  return path.startsWith('/notifications')
+}
+
+function beginLoading(path: string): void {
+  if (isNotificationPath(path)) return
+  activeRequests += 1
+  if (activeRequests === 1) loadingListener?.(true)
+}
+
+function endLoading(path: string): void {
+  if (isNotificationPath(path)) return
+  activeRequests = Math.max(0, activeRequests - 1)
+  if (activeRequests === 0) loadingListener?.(false)
+}
+
 function authHeaders(): Record<string, string> {
   const token = getToken()
   const headers: Record<string, string> = {}
@@ -73,6 +96,15 @@ async function parseError(response: Response): Promise<ApiError> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  beginLoading(path)
+  try {
+    return await doRequest<T>(path, options)
+  } finally {
+    endLoading(path)
+  }
+}
+
+async function doRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...authHeaders(),
@@ -104,6 +136,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 async function upload<T>(path: string, formData: FormData): Promise<T> {
+  beginLoading(path)
+  try {
+    return await doUpload<T>(path, formData)
+  } finally {
+    endLoading(path)
+  }
+}
+
+async function doUpload<T>(path: string, formData: FormData): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}/api${path}`, {
@@ -129,6 +170,15 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
 }
 
 async function download(path: string, fallbackName: string): Promise<void> {
+  beginLoading(path)
+  try {
+    await doDownload(path, fallbackName)
+  } finally {
+    endLoading(path)
+  }
+}
+
+async function doDownload(path: string, fallbackName: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/api${path}`, { headers: authHeaders() })
   if (!response.ok) {
     throw await parseError(response)
