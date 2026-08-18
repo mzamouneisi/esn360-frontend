@@ -185,10 +185,10 @@ export function CraDetail({
     return acts.filter(overlapsMonth)
   }, [filteredActivities, cra])
 
-  const incompleteDays = useMemo(
-    () => days.filter((d) => !dayIsValid(d)),
-    [days],
-  )
+  const incompleteDays = useMemo(() => {
+    if (cra?.type === 'CONGE') return []
+    return days.filter((d) => !dayIsValid(d))
+  }, [days, cra])
   const craValid = incompleteDays.length === 0
 
   if (!cra) {
@@ -334,6 +334,18 @@ export function CraDetail({
     }
   }
 
+  async function handleConvertToCra() {
+    if (!cra) return
+    if (!window.confirm('Convertir ce congé en CRA ?')) return
+    try {
+      const updated = await crasApi.convertToCra(cra.id)
+      setData(updated)
+      onChange?.()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
   function handleDeleteAll() {
     if (!window.confirm('Supprimer tous les événements ajoutés ?')) return
     removeAllEvents()
@@ -438,6 +450,11 @@ export function CraDetail({
             {CRA_STATUS_LABELS[cra.status] ?? cra.status}
           </Badge>
           <span className="text-sm text-gray-500">{cra.totalWorkedDays} j</span>
+          {cra.type === 'CONGE' && editable && (
+            <InlineButton onClick={handleConvertToCra}>
+              Convertir en CRA
+            </InlineButton>
+          )}
           <InlineButton onClick={openHistory}>Historique</InlineButton>
         </div>
       </div>

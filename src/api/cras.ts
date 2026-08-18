@@ -15,6 +15,7 @@ export const crasApi = {
   save: (id: number, request: SaveCraRequest) =>
     api.put<CraDto>(`/cras/${id}/days`, request),
   submit: (id: number) => api.post<CraDto>(`/cras/${id}/submit`),
+  convertToCra: (id: number) => api.post<CraDto>(`/cras/${id}/convert`),
   validate: (id: number) => api.post<CraDto>(`/cras/${id}/validate`),
   reject: (id: number, comment: string) =>
     api.post<CraDto>(`/cras/${id}/reject`, { comment }),
