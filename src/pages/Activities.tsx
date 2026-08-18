@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { activitiesApi, activityTypesApi } from '../api/activities'
 import { projectsApi } from '../api/projects'
 import { consultantsApi } from '../api/consultants'
+import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { useSoc } from '../soc/SocContext'
 import { Button, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatMoney } from '../lib/format'
-import type { ActivityDto, ActivityTypeDto, ProjectDto, ConsultantSummary } from '../api/types'
+import type { ActivityDto, ActivityTypeDto, ProjectDto, ConsultantSummary, SocDto } from '../api/types'
 
 interface FormState {
   name: string
@@ -21,6 +23,7 @@ interface FormState {
   typeId: string
   projectId: string
   consultantId: string
+  socId: string
   active: boolean
 }
 
@@ -34,32 +37,18 @@ const emptyForm: FormState = {
   typeId: '',
   projectId: '',
   consultantId: '',
+  socId: '',
   active: true,
 }
 
 export function Activities() {
   const { user } = useAuth()
   const { selectedSocId } = useSoc()
+  const navigate = useNavigate()
+  const isAdmin = user?.role === 'ADMIN'
   const canEdit =
     user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
   const workingSocId = selectedSocId ?? user?.socId ?? null
-
-  const { data, loading, error, reload, setData } = useAsync(
-    () => (workingSocId ? activitiesApi.findAll({ socId: workingSocId }) : activitiesApi.findAll()),
-    [workingSocId],
-  )
-  const { data: types } = useAsync(
-    () => (workingSocId ? activityTypesApi.findAll(workingSocId) : Promise.resolve([] as ActivityTypeDto[])),
-    [workingSocId],
-  )
-  const { data: projects } = useAsync(
-    () => (workingSocId ? projectsApi.findAll({ socId: workingSocId }) : Promise.resolve([] as ProjectDto[])),
-    [workingSocId],
-  )
-  const { data: consultants } = useAsync(
-    () => (workingSocId ? consultantsApi.summaries(workingSocId) : Promise.resolve([] as ConsultantSummary[])),
-    [workingSocId],
-  )
 
   const [form, setForm] = useState<FormState>(emptyForm)
   const [editing, setEditing] = useState<ActivityDto | null>(null)
@@ -67,10 +56,38 @@ export function Activities() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  const formSocId = form.socId ? Number(form.socId) : null
+  const effectiveSocId = isAdmin ? formSocId : workingSocId
+
+  const { data, loading, error, reload, setData } = useAsync(
+    () => (workingSocId ? activitiesApi.findAll({ socId: workingSocId }) : activitiesApi.findAll()),
+    [workingSocId],
+  )
+  const { data: types } = useAsync(
+    () => (effectiveSocId ? activityTypesApi.findAll(effectiveSocId) : Promise.resolve([] as ActivityTypeDto[])),
+    [effectiveSocId],
+  )
+  const { data: projects } = useAsync(
+    () => (effectiveSocId ? projectsApi.findAll({ socId: effectiveSocId }) : Promise.resolve([] as ProjectDto[])),
+    [effectiveSocId],
+  )
+  const { data: consultants } = useAsync(
+    () => (effectiveSocId ? consultantsApi.summaries(effectiveSocId) : Promise.resolve([] as ConsultantSummary[])),
+    [effectiveSocId],
+  )
+  const { data: socs } = useAsync(
+    () => (isAdmin ? socsApi.findAll() : Promise.resolve([] as SocDto[])),
+    [isAdmin],
+  )
+
   if (!user) return null
 
   function openCreate() {
-    setForm({ ...emptyForm, typeId: types?.[0] ? String(types[0].id) : '' })
+    setForm({
+      ...emptyForm,
+      typeId: types?.[0] ? String(types[0].id) : '',
+      socId: isAdmin ? '' : String(workingSocId ?? ''),
+    })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
@@ -87,6 +104,7 @@ export function Activities() {
       typeId: activity.type ? String(activity.type.id) : '',
       projectId: activity.project ? String(activity.project.id) : '',
       consultantId: activity.consultant ? String(activity.consultant.id) : '',
+      socId: activity.soc ? String(activity.soc.id) : '',
       active: activity.active,
     })
     setEditing(activity)
@@ -96,17 +114,17 @@ export function Activities() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    const socId = isAdmin ? (form.socId ? Number(form.socId) : null) : workingSocId
+    if (!socId) {
+      setFormError('Aucune société associée à votre compte')
+      return
+    }
     if (!form.name.trim() || !form.typeId || !form.projectId) {
       setFormError('Nom, type et projet sont obligatoires')
       return
     }
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
       setFormError('La date de fin ne peut pas précéder la date de début')
-      return
-    }
-    const socId = workingSocId
-    if (!socId) {
-      setFormError('Aucune société associée à votre compte')
       return
     }
     setSubmitting(true)
@@ -158,9 +176,14 @@ export function Activities() {
           <>
             <RefreshButton onClick={reload} />
             {canEdit ? (
-              <Button className="w-auto" onClick={openCreate}>
-                + Nouvelle activité
-              </Button>
+              <>
+                <InlineButton onClick={() => navigate('/types-activites')}>
+                  Gérer les types
+                </InlineButton>
+                <Button className="w-auto" onClick={openCreate}>
+                  + Nouvelle activité
+                </Button>
+              </>
             ) : null}
           </>
         }
@@ -323,6 +346,29 @@ export function Activities() {
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {formError}
             </div>
+          )}
+          {isAdmin && (
+            <Field label="Société *">
+              <Select
+                value={form.socId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    socId: e.target.value,
+                    typeId: '',
+                    projectId: '',
+                    consultantId: '',
+                  })
+                }
+              >
+                <option value="">Sélectionner…</option>
+                {(socs ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           )}
           <Field label="Nom *">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
