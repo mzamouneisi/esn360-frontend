@@ -269,8 +269,11 @@ export function CraList() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {pageItems.map((cra) => (
-                    <tr key={cra.id} className="align-top">
-                      <td className={`whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 ${cra.type === 'CONGE' ? 'bg-yellow-100' : ''}`}>
+                    <tr
+                      key={cra.id}
+                      className={`align-top ${cra.type === 'CONGE' ? 'bg-yellow-100' : ''}`}
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
                         {cra.year}-{String(cra.month).padStart(2, '0')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
