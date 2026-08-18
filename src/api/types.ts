@@ -351,6 +351,14 @@ export interface CraDto {
   days: CraDayDto[]
 }
 
+export interface CraExchangeDto {
+  id: number
+  dateTime: string
+  sender: string
+  receiver: string
+  comment: string | null
+}
+
 export interface CraDayActivityRequest {
   activityId: number
   hours?: number | null

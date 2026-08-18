@@ -11,9 +11,10 @@ import {
   CRA_STATUS_LABELS,
   DAY_TYPE_LABELS,
   MONTHS_FR,
+  formatDateTime,
   statusBadge,
 } from '../lib/format'
-import type { CraDto, DayType, ActivityDto } from '../api/types'
+import type { CraDto, DayType, ActivityDto, CraExchangeDto } from '../api/types'
 import type { ReactNode } from 'react'
 
 interface EditableActivity {
@@ -109,6 +110,9 @@ export function CraDetail() {
   const [formError, setFormError] = useState<string | null>(null)
   const [eventModal, setEventModal] = useState<number | null>(null)
   const [fillMonthOpen, setFillMonthOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [exchanges, setExchanges] = useState<CraExchangeDto[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   useEffect(() => {
     if (cra) setDays(cra.days.map(dayToEditable))
@@ -301,6 +305,20 @@ export function CraDetail() {
     removeAllEvents()
   }
 
+  async function openHistory() {
+    if (!cra) return
+    setHistoryOpen(true)
+    setHistoryLoading(true)
+    try {
+      setExchanges(await crasApi.exchanges(cra.id))
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+      setExchanges([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   function handleFillAllDays(activityId: string) {
     if (!activityId) {
       setFormError('Aucune activité correspondant à ce mois pour remplir le CRA.')
@@ -355,6 +373,7 @@ export function CraDetail() {
             {CRA_STATUS_LABELS[cra.status] ?? cra.status}
           </Badge>
           <span className="text-sm text-gray-500">{cra.totalWorkedDays} j</span>
+          <InlineButton onClick={openHistory}>Historique</InlineButton>
         </div>
       </div>
 
@@ -684,6 +703,14 @@ export function CraDetail() {
         />
       )}
 
+      {historyOpen && (
+        <HistoryModal
+          exchanges={exchanges}
+          loading={historyLoading}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+
       {eventModal !== null && eventModal >= 0 && eventModal < days.length && (
         <EventModal
           day={days[eventModal]}
@@ -697,6 +724,47 @@ export function CraDetail() {
         />
       )}
     </div>
+  )
+}
+
+function HistoryModal({
+  exchanges,
+  loading,
+  onClose,
+}: {
+  exchanges: CraExchangeDto[]
+  loading: boolean
+  onClose: () => void
+}) {
+  return (
+    <Modal
+      open
+      title="Historique des échanges"
+      onClose={onClose}
+      footer={<InlineButton onClick={onClose}>Fermer</InlineButton>}
+    >
+      {loading && <p className="px-4 py-6 text-center text-sm text-gray-400">Chargement…</p>}
+      {!loading && exchanges.length === 0 && (
+        <p className="rounded-lg border border-dashed border-gray-300 px-3 py-6 text-center text-sm text-gray-400">
+          Aucun échange pour ce CRA.
+        </p>
+      )}
+      {!loading && exchanges.length > 0 && (
+        <div className="max-h-96 space-y-2 overflow-y-auto">
+          {exchanges.map((e) => (
+            <div key={e.id} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
+                <span className="font-semibold text-gray-600">{e.sender}</span>
+                <span>→</span>
+                <span className="font-semibold text-gray-600">{e.receiver}</span>
+                <span className="ml-auto">{formatDateTime(e.dateTime)}</span>
+              </div>
+              {e.comment && <p className="mt-1 text-gray-700">{e.comment}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   )
 }
 
