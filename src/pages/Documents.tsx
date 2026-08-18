@@ -27,12 +27,19 @@ export function Documents() {
     [user?.socId],
   )
 
+  const { data: managers } = useAsync(
+    () => (user?.socId ? consultantsApi.managers(user.socId) : Promise.resolve([])),
+    [user?.socId],
+  )
+
   const [modalOpen, setModalOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [category, setCategory] = useState<string>(DOCUMENT_CATEGORIES[0])
   const [description, setDescription] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [consultantId, setConsultantId] = useState('')
+  const [visibility, setVisibility] = useState('PRIVATE')
+  const [sharedWith, setSharedWith] = useState<number[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -45,6 +52,8 @@ export function Documents() {
     setDescription('')
     setExpiresAt('')
     setConsultantId(isConsultant ? String(user.consultantId ?? '') : '')
+    setVisibility('PRIVATE')
+    setSharedWith([])
     setFormError(null)
     setModalOpen(true)
     setTimeout(() => fileRef.current?.click(), 50)
@@ -69,6 +78,8 @@ export function Documents() {
         category,
         expiresAt: expiresAt || null,
         description: description || null,
+        visibility,
+        sharedWith: visibility === 'PUBLIC' ? [] : sharedWith,
       })
       setModalOpen(false)
       reload()
@@ -278,6 +289,38 @@ export function Documents() {
           <Field label="Expiration (optionnel)">
             <Input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
           </Field>
+          <Field label="Visibilité">
+            <Select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+              <option value="PRIVATE">Privé (personnes choisies)</option>
+              <option value="PUBLIC">Public (toute la société)</option>
+            </Select>
+          </Field>
+          {visibility === 'PRIVATE' && (
+            <Field label="Partager avec">
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                {(managers ?? []).length === 0 && (
+                  <p className="px-2 py-1 text-sm text-gray-400">Aucune personne à partager</p>
+                )}
+                {(managers ?? []).map((m) => (
+                  <label key={m.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={sharedWith.includes(m.id)}
+                      onChange={(e) =>
+                        setSharedWith((prev) =>
+                          e.target.checked
+                            ? [...prev, m.id]
+                            : prev.filter((id) => id !== m.id),
+                        )
+                      }
+                      className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="text-gray-700">{m.fullName}</span>
+                  </label>
+                ))}
+              </div>
+            </Field>
+          )}
         </form>
       </Modal>
     </div>

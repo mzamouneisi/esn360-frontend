@@ -435,6 +435,7 @@ export interface HrDocumentDto {
   consultantId: number | null
   socId: number | null
   uploadedBy: string
+  visibility: string
   createdAt: string
 }
 
