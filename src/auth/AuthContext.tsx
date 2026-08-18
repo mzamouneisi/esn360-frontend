@@ -30,7 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const doc = document.documentElement
     doc.style.fontSize = `${user?.fontSize && user.fontSize > 0 ? user.fontSize : 14}px`
-  }, [user?.fontSize])
+    doc.dataset.theme = user?.theme || 'ocean'
+  }, [user?.fontSize, user?.theme])
 
   useEffect(() => {
     setUnauthorizedHandler(() => {

@@ -69,6 +69,7 @@ export interface UserDto {
   mustChangePassword: boolean
   lastLoginAt: string | null
   fontSize: number
+  theme: string
 }
 
 export interface AuthResponse {
