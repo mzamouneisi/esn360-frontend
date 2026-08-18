@@ -11,6 +11,7 @@ const {
   getOrCreateMock,
   validateMock,
   rejectMock,
+  deleteMock,
   exportCsvMock,
   exportPdfMock,
   userMock,
@@ -20,6 +21,7 @@ const {
   getOrCreateMock: vi.fn(),
   validateMock: vi.fn(),
   rejectMock: vi.fn(),
+  deleteMock: vi.fn(),
   exportCsvMock: vi.fn(),
   exportPdfMock: vi.fn(),
   userMock: { value: null as unknown as UserDto },
@@ -46,6 +48,7 @@ vi.mock('../api/cras', () => ({
     submit: vi.fn(),
     validate: validateMock,
     reject: rejectMock,
+    delete: deleteMock,
     exportCsv: exportCsvMock,
     exportPdf: exportPdfMock,
   },
@@ -119,7 +122,6 @@ describe('CraList', () => {
     expect(findByMonthMock).toHaveBeenCalledWith(2026, 8, 5)
     expect(screen.getAllByText('Soumis').length).toBeGreaterThan(0)
     expect(screen.getByText('21 j')).toBeInTheDocument()
-    expect(screen.getByText('151.5 h')).toBeInTheDocument()
     expect(screen.queryByText('Bob Dupont')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exporter CSV' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exporter PDF' })).toBeInTheDocument()
@@ -148,6 +150,28 @@ describe('CraList', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Rejeter' }))
 
     await waitFor(() => expect(rejectMock).toHaveBeenCalledWith(1, 'Facture en double'))
+  })
+
+  it('supprime un CRA non soumis et n’affiche pas l’action pour un CRA soumis', async () => {
+    userMock.value = managerUser
+    findByMonthMock.mockResolvedValue([
+      cra({ status: 'DRAFT', consultantName: 'Carla Draft' }),
+      cra({ id: 2, consultantName: 'Bob Soumis', status: 'SUBMITTED' }),
+    ])
+    deleteMock.mockResolvedValue(undefined)
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
+
+    renderList()
+
+    await screen.findByText('Carla Draft')
+
+    expect(screen.getByRole('button', { name: 'Éditer' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ouvrir' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }))
+
+    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1))
   })
 
   it('exporte les CRA en CSV et PDF', async () => {
@@ -179,13 +203,13 @@ describe('CraList', () => {
     expect(await screen.findByText('Aucun CRA pour cette période')).toBeInTheDocument()
     expect(findByConsultantMock).toHaveBeenCalledWith(10, 2026)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Créer mon CRA de Août 2026' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau CRA' }))
 
     await waitFor(() => expect(getOrCreateMock).toHaveBeenCalledWith(10, 2026, 8))
     expect(screen.queryByRole('button', { name: 'Exporter CSV' })).not.toBeInTheDocument()
   })
 
-  it('liste tous les CRA de l’année pour un consultant sans action de validation', async () => {
+  it('affiche uniquement le CRA du mois sélectionné pour un consultant', async () => {
     userMock.value = consultantUser
     findByConsultantMock.mockResolvedValue([
       cra(),
@@ -195,7 +219,7 @@ describe('CraList', () => {
     renderList()
 
     expect(await screen.findByText('Alice Martin')).toBeInTheDocument()
-    expect(screen.getByText('Bob Dupont')).toBeInTheDocument()
+    expect(screen.queryByText('Bob Dupont')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Valider' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rejeter' })).not.toBeInTheDocument()
   })

@@ -16,6 +16,7 @@ export const crasApi = {
   validate: (id: number) => api.post<CraDto>(`/cras/${id}/validate`),
   reject: (id: number, comment: string) =>
     api.post<CraDto>(`/cras/${id}/reject`, { comment }),
+  delete: (id: number) => api.delete<void>(`/cras/${id}`),
   exportCsv: (params: { socId?: number; month: number; year: number }) =>
     api.download(`/cras/export/csv?month=${params.month}&year=${params.year}${params.socId ? `&socId=${params.socId}` : ''}`, `cra-${params.month}-${params.year}.csv`),
   exportPdf: (params: { socId?: number; month: number; year: number }) =>

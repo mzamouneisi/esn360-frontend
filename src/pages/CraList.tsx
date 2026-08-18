@@ -1,18 +1,25 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
-import { crasApi } from '../api/cras'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
-import { useAsync } from '../lib/useAsync'
-import { Button, Card, InlineButton, Select, Spinner } from '../components/ui'
+import { crasApi } from '../api/cras'
+import type { CraDto } from '../api/types'
+import { useAuth } from '../auth/AuthContext'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
+import { Button, Card, InlineButton, Select, Spinner } from '../components/ui'
 import {
   CRA_STATUS_LABELS,
   MONTHS_FR,
-  monthShort,
   statusBadge,
+  formatDate,
 } from '../lib/format'
-import type { CraDto } from '../api/types'
+import { useAsync } from '../lib/useAsync'
+
+const PAGE_SIZE = 5
+
+function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta
+  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
+}
 
 export function CraList() {
   const { user } = useAuth()
@@ -21,6 +28,7 @@ export function CraList() {
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [exporting, setExporting] = useState<null | 'csv' | 'pdf'>(null)
+  const [page, setPage] = useState(0)
 
   const isConsultant = user?.role === 'CONSULTANT'
   const canValidate =
@@ -44,9 +52,35 @@ export function CraList() {
 
   const { data, loading, error, reload } = isConsultant ? ownCras : socCras
 
+  useEffect(() => {
+    setPage(0)
+  }, [year, month])
+
   if (!user) return null
 
-  const list = (data ?? []).filter((c) => c.month === month || isConsultant)
+  const list = (data ?? []).filter((c) => c.month === month)
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages - 1)
+  const pageItems = list.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
+
+  const editable = (c: CraDto) => c.status !== 'SUBMITTED' && c.status !== 'VALIDATED'
+
+  function goPrev() {
+    const p = shiftMonth(year, month, -1)
+    setYear(p.year)
+    setMonth(p.month)
+  }
+
+  function goToday() {
+    setYear(now.getFullYear())
+    setMonth(now.getMonth() + 1)
+  }
+
+  function goNext() {
+    const p = shiftMonth(year, month, 1)
+    setYear(p.year)
+    setMonth(p.month)
+  }
 
   async function changeStatus(id: number, action: 'validate' | 'reject') {
     if (action === 'reject') {
@@ -67,6 +101,31 @@ export function CraList() {
       }
     }
     reload()
+  }
+
+  async function handleDelete(c: CraDto) {
+    if (
+      !window.confirm(
+        `Supprimer le CRA de ${c.consultantName ?? '—'} (${MONTHS_FR[c.month - 1]} ${c.year}) ?`,
+      )
+    )
+      return
+    try {
+      await crasApi.delete(c.id)
+      reload()
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function createCra() {
+    if (!user?.consultantId) return
+    try {
+      const cra = await crasApi.getOrCreate(user.consultantId, year, month)
+      navigate(`/cras/${cra.id}`)
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
   }
 
   async function handleExport(kind: 'csv' | 'pdf') {
@@ -131,6 +190,17 @@ export function CraList() {
             ))}
           </Select>
         </label>
+        <div className="flex items-center gap-1">
+          <InlineButton onClick={goPrev} title="Mois précédent">
+            ◀
+          </InlineButton>
+          <InlineButton onClick={goToday} title="Revenir au mois actuel">
+            auj
+          </InlineButton>
+          <InlineButton onClick={goNext} title="Mois suivant">
+            ▶
+          </InlineButton>
+        </div>
         {isConsultant && (
           <p className="ml-auto text-sm text-gray-500">
             Vos CRA pour l'année {year}. Sélectionnez un mois pour enregistrer votre activité.
@@ -146,98 +216,131 @@ export function CraList() {
           <p className="text-sm font-medium text-gray-900">Aucun CRA pour cette période</p>
           <p className="mt-1 text-sm text-gray-500">
             {isConsultant
-              ? 'Ouvrez le mois pour créer votre CRA.'
+              ? 'Cliquez sur « Nouveau CRA » pour créer votre CRA de ce mois.'
               : 'Aucun CRA soumis ou saisi ce mois-ci.'}
           </p>
-          {isConsultant && user.consultantId && (
-            <Button
-              className="mt-4 w-auto"
-              onClick={async () => {
-                try {
-                  const cra = await crasApi.getOrCreate(user.consultantId!, year, month)
-                  navigate(`/cras/${cra.id}`)
-                } catch (err) {
-                  window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
-                }
-              }}
-            >
-              Créer mon CRA de {monthShort(month)} {year}
-            </Button>
-          )}
         </Card>
       )}
 
       {!loading && list.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {list.map((cra) => (
-            <Card key={cra.id} className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-gray-900">{cra.consultantName ?? 'Consultant'}</p>
-                  <p className="text-sm text-gray-500">
-                    {MONTHS_FR[cra.month - 1]} {cra.year}
-                  </p>
-                </div>
-                <Badge kind={statusBadge(cra.status)}>
-                  {CRA_STATUS_LABELS[cra.status] ?? cra.status}
-                </Badge>
-              </div>
+        <>
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Année-mois
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Consultant
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Statut
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Jours
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Soumis le
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Validé le
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Commentaire
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {pageItems.map((cra) => (
+                    <tr key={cra.id} className="align-top">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                        {cra.year}-{String(cra.month).padStart(2, '0')}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {cra.consultantName ?? '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge kind={statusBadge(cra.status)}>
+                          {CRA_STATUS_LABELS[cra.status] ?? cra.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{cra.totalWorkedDays} j</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {formatDate(cra.submittedAt)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {formatDate(cra.validatedAt)}
+                      </td>
+                      <td className="max-w-64 px-4 py-3 text-sm text-gray-600">
+                        {cra.comment ?? '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <InlineButton onClick={() => navigate(`/cras/${cra.id}`)}>
+                            {editable(cra) ? 'Éditer' : 'Ouvrir'}
+                          </InlineButton>
+                          {editable(cra) && (
+                            <InlineButton
+                              className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                              onClick={() => handleDelete(cra)}
+                            >
+                              Supprimer
+                            </InlineButton>
+                          )}
+                          {canValidate && cra.status === 'SUBMITTED' && (
+                            <>
+                              <InlineButton
+                                className="border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                                onClick={() => changeStatus(cra.id, 'validate')}
+                              >
+                                Valider
+                              </InlineButton>
+                              <InlineButton
+                                className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                                onClick={() => changeStatus(cra.id, 'reject')}
+                              >
+                                Rejeter
+                              </InlineButton>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4 text-sm">
-                <div>
-                  <p className="text-xs text-gray-500">Jours</p>
-                  <p className="font-medium text-gray-900">{cra.totalWorkedDays} j</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Heures</p>
-                  <p className="font-medium text-gray-900">{cra.totalHours} h</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Soumis</p>
-                  <p className="font-medium text-gray-900">{cra.submittedAt ?? '—'}</p>
-                </div>
-              </div>
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <InlineButton disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>
+                ← Précédent
+              </InlineButton>
+              <span className="text-sm text-gray-500">
+                Page {safePage + 1} / {totalPages}
+              </span>
+              <InlineButton
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage(safePage + 1)}
+              >
+                Suivant →
+              </InlineButton>
+            </div>
+          )}
+        </>
+      )}
 
-              {cra.comment && (
-                <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                  Rejet : {cra.comment}
-                </p>
-              )}
-
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Button
-                  className="w-auto"
-                  onClick={() => navigate(`/cras/${cra.id}`)}
-                >
-                  Ouvrir
-                </Button>
-                {canValidate && cra.status === 'SUBMITTED' && (
-                  <>
-                    <InlineButton
-                      className="border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                      onClick={() => changeStatus(cra.id, 'validate')}
-                    >
-                      Valider
-                    </InlineButton>
-                    <InlineButton
-                      className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                      onClick={() => changeStatus(cra.id, 'reject')}
-                    >
-                      Rejeter
-                    </InlineButton>
-                  </>
-                )}
-                {isConsultant && cra.status === 'REJECTED' && (
-                  <Link
-                    to={`/cras/${cra.id}`}
-                    className="text-sm font-medium text-brand-600 hover:text-brand-700"
-                  >
-                    Corriger et renvoyer →
-                  </Link>
-                )}
-              </div>
-            </Card>
-          ))}
+      {isConsultant && user.consultantId && (
+        <div className="mt-4 flex justify-end">
+          <Button className="w-auto" onClick={createCra}>
+            Nouveau CRA
+          </Button>
         </div>
       )}
     </div>
