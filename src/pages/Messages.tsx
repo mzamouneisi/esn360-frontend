@@ -16,7 +16,7 @@ export function Messages() {
   const isAdmin = user?.role === 'ADMIN'
   const [tab, setTab] = useState<Tab>('inbox')
   const [page, setPage] = useState(0)
-  const size = 15
+  const size = user?.pageSize ?? 5
 
   const { data, loading, error, reload, setData } = useAsync(
     () => (tab === 'inbox' ? messagesApi.inbox(page, size) : messagesApi.sent(page, size)),

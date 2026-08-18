@@ -153,6 +153,7 @@ export function FichePaie() {
 
       {!loading && data && data.length > 0 && (
         <Table
+          paginate
           rowKey={(fp) => fp.id}
           rows={data}
           columns={[

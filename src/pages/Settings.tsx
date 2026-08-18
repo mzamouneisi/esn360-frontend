@@ -26,6 +26,7 @@ export function Settings() {
   const [theme, setTheme] = useState<string>(user?.theme || 'ocean')
   const [headerColor, setHeaderColor] = useState<string>(user?.tableHeaderColor || '#f9fafb')
   const [borderColor, setBorderColor] = useState<string>(user?.tableBorderColor || '#e5e7eb')
+  const [pageSize, setPageSize] = useState<number>(user?.pageSize ?? 5)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -37,7 +38,8 @@ export function Settings() {
     size !== (u.fontSize ?? 14) ||
     (u.theme || 'ocean') !== theme ||
     (u.tableHeaderColor || '#f9fafb') !== headerColor ||
-    (u.tableBorderColor || '#e5e7eb') !== borderColor
+    (u.tableBorderColor || '#e5e7eb') !== borderColor ||
+    (u.pageSize ?? 5) !== pageSize
 
   async function handleSave() {
     setSaving(true)
@@ -53,6 +55,9 @@ export function Settings() {
       if ((u.tableHeaderColor || '#f9fafb') !== headerColor ||
           (u.tableBorderColor || '#e5e7eb') !== borderColor) {
         await authApi.updateTableColors(headerColor, borderColor)
+      }
+      if ((u.pageSize ?? 5) !== pageSize) {
+        await authApi.updatePageSize(pageSize)
       }
       await refreshMe()
       setSaved(true)
@@ -132,6 +137,29 @@ export function Settings() {
           style={{ backgroundColor: 'var(--brand-50)', color: 'var(--brand-800)' }}
         >
           Aperçu : ceci est un exemple de texte aux couleurs du thème.
+        </div>
+
+        <h3 className="mt-8 text-sm font-semibold text-gray-900">Nombre de lignes par page</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Nombre de lignes affichées par table, le reste étant accessible via les boutons Précédent / Suivant.
+        </p>
+        <div className="mt-4 flex flex-wrap items-end gap-4">
+          <Field label="Lignes par page">
+            <Select
+              className="w-28"
+              value={String(pageSize)}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value))
+                setSaved(false)
+              }}
+            >
+              {[5, 10, 15, 20, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </Select>
+          </Field>
         </div>
 
         <h3 className="mt-8 text-sm font-semibold text-gray-900">Couleurs des tables</h3>

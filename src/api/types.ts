@@ -72,6 +72,7 @@ export interface UserDto {
   theme: string
   tableHeaderColor: string
   tableBorderColor: string
+  pageSize: number
 }
 
 export interface AuthResponse {

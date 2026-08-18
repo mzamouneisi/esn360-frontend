@@ -1,7 +1,8 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Spinner } from './ui'
 import { badgeClasses } from '../lib/format'
+import { useAuth } from '../auth/AuthContext'
 
 export function Badge({
   kind = 'muted',
@@ -85,6 +86,7 @@ export function Table<T>({
   loading,
   empty,
   onRowClick,
+  paginate = false,
 }: {
   columns: { key: string; label: string; className?: string; render: (row: T) => ReactNode }[]
   rows: T[]
@@ -92,11 +94,21 @@ export function Table<T>({
   loading?: boolean
   empty?: ReactNode
   onRowClick?: (row: T) => void
+  paginate?: boolean
 }) {
+  const { user } = useAuth()
+  const [page, setPage] = useState(0)
+
   if (loading) return <LoadingBlock />
   if (rows.length === 0) {
     return empty ?? <EmptyState title="Aucun élément" description="Aucune donnée à afficher." />
   }
+
+  const pageSize = paginate ? (user?.pageSize ?? 5) : 0
+  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1
+  const safePage = Math.min(page, totalPages - 1)
+  const visibleRows = pageSize > 0 ? rows.slice(safePage * pageSize, safePage * pageSize + pageSize) : rows
+
   return (
     <div
       className="overflow-hidden rounded-xl border bg-white shadow-sm"
@@ -117,7 +129,7 @@ export function Table<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -133,6 +145,9 @@ export function Table<T>({
           </tbody>
         </table>
       </div>
+      {paginate && totalPages > 1 && (
+        <Pagination page={safePage} totalPages={totalPages} total={rows.length} onChange={setPage} />
+      )}
     </div>
   )
 }

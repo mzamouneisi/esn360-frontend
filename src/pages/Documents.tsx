@@ -156,6 +156,7 @@ export function Documents() {
       {!loading && data && data.length > 0 && (
         <div className="mt-6">
           <Table
+            paginate
             rowKey={(d) => d.id}
             rows={data}
             columns={[

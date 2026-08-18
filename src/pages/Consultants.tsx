@@ -66,7 +66,7 @@ export function Consultants() {
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [page, setPage] = useState(0)
-  const size = 20
+  const size = user?.pageSize ?? 5
 
   useEffect(() => {
     const t = setTimeout(() => {

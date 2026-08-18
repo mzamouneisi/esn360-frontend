@@ -14,7 +14,6 @@ import {
 import { useAsync } from '../lib/useAsync'
 import { CraDetail } from './CraDetail'
 
-const PAGE_SIZE = 5
 
 function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
   const total = year * 12 + (month - 1) + delta
@@ -67,9 +66,9 @@ export function CraList() {
     const status = (CRA_STATUS_LABELS[c.status] ?? c.status).toLowerCase()
     return yearMonth.includes(q) || consultant.includes(q) || status.includes(q)
   })
-  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(list.length / (user?.pageSize ?? 5)))
   const safePage = Math.min(page, totalPages - 1)
-  const pageItems = list.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
+  const pageItems = list.slice(safePage * (user?.pageSize ?? 5), safePage * (user?.pageSize ?? 5) + (user?.pageSize ?? 5))
 
   const editable = (c: CraDto) => c.status !== 'SUBMITTED' && c.status !== 'VALIDATED'
 

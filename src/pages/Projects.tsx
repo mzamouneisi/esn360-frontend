@@ -152,6 +152,7 @@ export function Projects() {
       {loading && <LoadingBlock />}
       {!loading && data && (
         <Table
+          paginate
           rowKey={(p) => p.id}
           onRowClick={canEdit ? openEdit : undefined}
           rows={data}

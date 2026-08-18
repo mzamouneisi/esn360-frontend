@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { usersApi, type UpdateUserRequest } from '../api/users'
 import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import type { SocDto, UserDto } from '../api/types'
 import { useAsync } from '../lib/useAsync'
 import { Button, Field, Input, InlineButton, RefreshButton, Select, Spinner } from '../components/ui'
@@ -31,10 +32,11 @@ interface EditForm {
 }
 
 export function Users() {
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [page, setPage] = useState(0)
-  const size = 20
+  const size = user?.pageSize ?? 5
 
   useEffect(() => {
     const timer = setTimeout(() => {

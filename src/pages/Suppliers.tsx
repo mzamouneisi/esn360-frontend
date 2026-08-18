@@ -178,6 +178,7 @@ export function Suppliers() {
       {loading && <LoadingBlock />}
       {!loading && data && (
         <Table
+          paginate
           rowKey={(s) => s.id}
           onRowClick={canEdit ? openEdit : undefined}
           rows={data}

@@ -278,6 +278,7 @@ export function NoteFraisList() {
       {!loading && data && data.length > 0 && (
         <div className="mt-6">
           <Table
+            paginate
             rowKey={(nf) => nf.id}
             rows={data}
             columns={[

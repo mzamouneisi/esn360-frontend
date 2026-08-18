@@ -32,7 +32,7 @@ export function Support() {
   const canManage = user?.role === 'ADMIN'
   const [page, setPage] = useState(0)
   const [mine, setMine] = useState(false)
-  const size = 10
+  const size = user?.pageSize ?? 5
 
   const { data, loading, error, reload } = useAsync(
     () => supportApi.findAll({ page, size, mine }),

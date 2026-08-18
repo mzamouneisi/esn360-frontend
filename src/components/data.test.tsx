@@ -11,6 +11,17 @@ import {
   Table,
 } from './data'
 
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+    initializing: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    setUser: vi.fn(),
+    refreshMe: vi.fn(),
+  }),
+}))
+
 describe('Badge', () => {
   it('affiche le contenu avec la classe de la variante', () => {
     const { container } = render(<Badge kind="success">Actif</Badge>)

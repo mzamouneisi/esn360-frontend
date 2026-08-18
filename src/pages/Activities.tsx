@@ -186,6 +186,7 @@ export function Activities() {
 
       {!loading && data && data.length > 0 && (
         <Table
+          paginate
           rowKey={(a) => a.id}
           rows={data}
           onRowClick={canEdit ? openEdit : undefined}

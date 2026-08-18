@@ -249,6 +249,7 @@ export function SocAdmin({ scope = 'mine' }: { scope?: 'mine' | 'all' }) {
 
       {!loading && filtered.length > 0 && (
         <Table
+          paginate
           rowKey={(s) => s.id}
           rows={filtered}
           columns={[
