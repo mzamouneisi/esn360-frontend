@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { supportApi } from '../api/support'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Field, InlineButton, Input, Select, Spinner, Textarea } from '../components/ui'
+import { Button, Field, InlineButton, Input, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
 import {
   Badge,
   EmptyState,
@@ -123,15 +123,18 @@ export function Support() {
         title="Support"
         subtitle="Tickets d'assistance et demandes"
         actions={
-          <Button
-            className="w-auto"
-            onClick={() => {
-              setCreateOpen(true)
-              setFormError(null)
-            }}
-          >
-            + Nouveau ticket
-          </Button>
+          <>
+            <RefreshButton onClick={reload} />
+            <Button
+              className="w-auto"
+              onClick={() => {
+                setCreateOpen(true)
+                setFormError(null)
+              }}
+            >
+              + Nouveau ticket
+            </Button>
+          </>
         }
       />
 

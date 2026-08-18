@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { projectsApi } from '../api/projects'
 import { crasApi } from '../api/cras'
 import { useAsync } from '../lib/useAsync'
-import { Card } from '../components/ui'
+import { Card, RefreshButton } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
 import { MONTHS_FR, formatDate, formatMoney, monthShort } from '../lib/format'
 import type { ProjectDto } from '../api/types'
@@ -40,7 +40,7 @@ export function Missions() {
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
 
-  const { data, loading, error } = useAsync(
+  const { data, loading, error, reload } = useAsync(
     () => projectsApi.findAll(isAdmin ? undefined : { socId: user?.socId ?? undefined }),
     [user?.socId, isAdmin],
   )
@@ -74,6 +74,7 @@ export function Missions() {
       <PageHeader
         title="Missions"
         subtitle="Vue opérationnelle des missions en cours, à venir et terminées"
+        actions={<RefreshButton onClick={reload} />}
       />
 
       {error && <ErrorBlock message={error} />}

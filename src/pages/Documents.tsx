@@ -4,7 +4,7 @@ import { documentsApi } from '../api/documents'
 import { consultantsApi } from '../api/consultants'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { DOCUMENT_CATEGORIES, formatDate, formatSize } from '../lib/format'
 import type { HrDocumentDto } from '../api/types'
@@ -122,11 +122,14 @@ export function Documents() {
         title="Documents"
         subtitle="Partage et archivage des documents (contrats, pièces RH…)"
         actions={
-          canEdit ? (
-            <Button className="w-auto" onClick={openUpload}>
-              + Partager un document
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit ? (
+              <Button className="w-auto" onClick={openUpload}>
+                + Partager un document
+              </Button>
+            ) : null}
+          </>
         }
       />
 

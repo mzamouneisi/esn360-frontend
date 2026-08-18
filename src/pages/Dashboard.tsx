@@ -1,6 +1,6 @@
 import { useAuth } from '../auth/AuthContext'
 import { useSoc } from '../soc/SocContext'
-import { Card } from '../components/ui'
+import { Card, RefreshButton } from '../components/ui'
 import { Badge, LoadingBlock, ErrorBlock } from '../components/data'
 import { dashboardApi } from '../api/dashboard'
 import { useAsync } from '../lib/useAsync'
@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom'
 export function Dashboard() {
   const { user } = useAuth()
   const { selectedSoc, selectedSocId } = useSoc()
-  const { data, loading, error } = useAsync(() => dashboardApi.overview(), [selectedSocId], {
+  const { data, loading, error, reload } = useAsync(() => dashboardApi.overview(), [selectedSocId], {
     enabled: !!user,
   })
 
@@ -31,14 +31,17 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">
-          Bonjour {user.firstName} 👋
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Voici un aperçu de votre activité
-          {activeSocName ? ` chez ${activeSocName}` : ''} · {monthLabel(month)} {year}.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Bonjour {user.firstName} 👋
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Voici un aperçu de votre activité
+            {activeSocName ? ` chez ${activeSocName}` : ''} · {monthLabel(month)} {year}.
+          </p>
+        </div>
+        <RefreshButton onClick={reload} />
       </div>
 
       {loading && <LoadingBlock />}

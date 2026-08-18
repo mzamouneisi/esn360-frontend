@@ -6,7 +6,7 @@ import { socsApi, type SocDependency } from '../api/socs'
 import { ApiError } from '../api/client'
 import type { AddSocPayload, SocDto, SocLiteDto } from '../api/types'
 import { useAsync } from '../lib/useAsync'
-import { Button, Field, Input, InlineButton, Spinner, Textarea } from '../components/ui'
+import { Button, Field, Input, InlineButton, RefreshButton, Spinner, Textarea } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 
 interface EditForm {
@@ -212,9 +212,12 @@ export function SocAdmin({ scope = 'mine' }: { scope?: 'mine' | 'all' }) {
             : "Toutes les sociétés de l'application"
         }
         actions={
-          <Button className="w-auto" onClick={() => setAddOpen(true)}>
-            + Nouvelle société
-          </Button>
+          <>
+            <RefreshButton onClick={reload} />
+            <Button className="w-auto" onClick={() => setAddOpen(true)}>
+              + Nouvelle société
+            </Button>
+          </>
         }
       />
 

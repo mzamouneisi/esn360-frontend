@@ -6,7 +6,7 @@ import { consultantsApi } from '../api/consultants'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { useSoc } from '../soc/SocContext'
-import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatMoney } from '../lib/format'
 import type { ActivityDto, ActivityTypeDto, ProjectDto, ConsultantSummary } from '../api/types'
@@ -155,11 +155,14 @@ export function Activities() {
         title="Activités & tarifs"
         subtitle="Prestations facturables utilisées dans les CRA"
         actions={
-          canEdit ? (
-            <Button className="w-auto" onClick={openCreate}>
-              + Nouvelle activité
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit ? (
+              <Button className="w-auto" onClick={openCreate}>
+                + Nouvelle activité
+              </Button>
+            ) : null}
+          </>
         }
       />
 

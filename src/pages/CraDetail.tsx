@@ -5,7 +5,7 @@ import { crasApi } from '../api/cras'
 import { activitiesApi } from '../api/activities'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, Modal } from '../components/data'
 import {
   CRA_STATUS_LABELS,
@@ -114,7 +114,7 @@ export function CraDetail({
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const { data: cra, loading, error, setData } = useAsync(
+  const { data: cra, loading, error, setData, reload } = useAsync(
     () => crasApi.getById(id),
     [id],
   )
@@ -446,6 +446,7 @@ export function CraDetail({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <RefreshButton onClick={reload} label="" />
           <Badge kind={statusBadge(cra.status)}>
             {CRA_STATUS_LABELS[cra.status] ?? cra.status}
           </Badge>

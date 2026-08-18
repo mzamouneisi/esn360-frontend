@@ -6,7 +6,7 @@ import { socsApi, type SocDependency } from '../api/socs'
 import type { SocDto } from '../api/types'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, Input, Spinner, Textarea } from '../components/ui'
+import { Button, Card, Field, Input, RefreshButton, Spinner, Textarea } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
 import { ROLE_LABELS, formatDateTime } from '../lib/format'
 
@@ -39,7 +39,7 @@ export function Profile() {
   const [changeError, setChangeError] = useState<string | null>(null)
   const [changeSuccess, setChangeSuccess] = useState(false)
 
-  const { data: connections, loading: connectionsLoading } = useAsync(
+  const { data: connections, loading: connectionsLoading, reload } = useAsync(
     () => authApi.connections(),
     [],
   )
@@ -145,7 +145,18 @@ export function Profile() {
 
   return (
     <div>
-      <PageHeader title="Mon profil" subtitle="Informations personnelles, mot de passe et connexions" />
+      <PageHeader
+        title="Mon profil"
+        subtitle="Informations personnelles, mot de passe et connexions"
+        actions={
+          <RefreshButton
+            onClick={() => {
+              void refreshMe()
+              reload()
+            }}
+          />
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="p-6">

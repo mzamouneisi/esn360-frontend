@@ -5,7 +5,7 @@ import { projectsApi } from '../api/projects'
 import { crasApi } from '../api/cras'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Card, InlineButton, Select, Spinner } from '../components/ui'
+import { Card, InlineButton, RefreshButton, Select, Spinner } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
 import {
   MONTHS_FR,
@@ -29,7 +29,7 @@ export function Facturation() {
 
   const socId = isAdmin ? selectedSoc : user?.socId ?? null
 
-  const { data: detail, loading: detailLoading, error: detailError } = useAsync(
+  const { data: detail, loading: detailLoading, error: detailError, reload } = useAsync(
     () => (socId ? socsApi.getById(socId) : Promise.resolve(null)),
     [socId],
   )
@@ -76,6 +76,7 @@ export function Facturation() {
         subtitle="Abonnement, paiements et chiffre d'affaires"
         actions={
           <div className="flex items-center gap-2">
+            <RefreshButton onClick={reload} />
             <Select
               className="w-auto"
               value={month}

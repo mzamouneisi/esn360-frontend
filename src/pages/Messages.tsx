@@ -4,7 +4,7 @@ import { messagesApi } from '../api/messages'
 import { usersApi } from '../api/users'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Field, InlineButton, Input, Select, Spinner, Textarea } from '../components/ui'
+import { Button, Field, InlineButton, Input, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
 import { EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Pagination, Table } from '../components/data'
 import { formatDateTime } from '../lib/format'
 import type { MessageDto } from '../api/types'
@@ -100,17 +100,20 @@ export function Messages() {
         title="Messages"
         subtitle="Messagerie interne"
         actions={
-          isAdmin ? (
-            <Button
-              className="w-auto"
-              onClick={() => {
-                setComposeOpen(true)
-                setFormError(null)
-              }}
-            >
-              + Nouveau message
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {isAdmin ? (
+              <Button
+                className="w-auto"
+                onClick={() => {
+                  setComposeOpen(true)
+                  setFormError(null)
+                }}
+              >
+                + Nouveau message
+              </Button>
+            ) : null}
+          </>
         }
       />
 

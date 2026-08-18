@@ -5,7 +5,7 @@ import { clientsApi } from '../api/clients'
 import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
+import { Button, Field, Input, InlineButton, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatDate, formatMoney } from '../lib/format'
 import type { ProjectDto } from '../api/types'
@@ -137,11 +137,14 @@ export function Projects() {
         title="Projets"
         subtitle="Les projets par client et leurs conditions commerciales"
         actions={
-          canEdit ? (
-            <Button className="w-auto" onClick={openCreate}>
-              + Nouveau projet
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit ? (
+              <Button className="w-auto" onClick={openCreate}>
+                + Nouveau projet
+              </Button>
+            ) : null}
+          </>
         }
       />
 

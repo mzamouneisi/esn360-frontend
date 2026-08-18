@@ -4,7 +4,7 @@ import { noteFraisApi } from '../api/noteFrais'
 import { consultantsApi } from '../api/consultants'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import {
   MONTHS_FR,
@@ -195,6 +195,7 @@ export function NoteFraisList() {
         subtitle="Suivi des dépenses et remboursements"
         actions={
           <div className="flex items-center gap-2">
+            <RefreshButton onClick={reload} />
             <Select
               className="w-auto"
               value={year}

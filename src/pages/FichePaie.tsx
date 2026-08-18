@@ -4,7 +4,7 @@ import { fichePaieApi } from '../api/fichePaie'
 import { consultantsApi } from '../api/consultants'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import { EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { formatDate, formatMoney } from '../lib/format'
 import type { FichePaieDto } from '../api/types'
@@ -132,11 +132,14 @@ export function FichePaie() {
         title="Fiches de paie"
         subtitle="Bulletins de salaire par consultant et par période"
         actions={
-          canEdit ? (
-            <Button className="w-auto" onClick={openCreate}>
-              + Nouvelle fiche
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit ? (
+              <Button className="w-auto" onClick={openCreate}>
+                + Nouvelle fiche
+              </Button>
+            ) : null}
+          </>
         }
       />
 

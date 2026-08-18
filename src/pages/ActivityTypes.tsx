@@ -4,7 +4,7 @@ import { activityTypesApi } from '../api/activities'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { useSoc } from '../soc/SocContext'
-import { Button, Field, InlineButton, Input, Spinner } from '../components/ui'
+import { Button, Field, InlineButton, Input, RefreshButton, Spinner } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import type { ActivityTypeDto, ActivityTypeRequest } from '../api/types'
 
@@ -130,11 +130,14 @@ export function ActivityTypes() {
         title="Types d’activités"
         subtitle="Types de prestations utilisés dans les activités et les CRA"
         actions={
-          canEdit && workingSocId ? (
-            <Button className="w-auto" onClick={openCreate}>
-              + Nouveau type
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit && workingSocId ? (
+              <Button className="w-auto" onClick={openCreate}>
+                + Nouveau type
+              </Button>
+            ) : null}
+          </>
         }
       />
 

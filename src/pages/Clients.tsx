@@ -5,7 +5,7 @@ import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import type { CompanyLookup } from '../api/auth'
 import { useAsync } from '../lib/useAsync'
-import { Button, Field, Input, InlineButton, Select, Spinner, Textarea } from '../components/ui'
+import { Button, Field, Input, InlineButton, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
 import { Badge, EmptyState, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import { useSoc } from '../soc/SocContext'
 import { socToCompanyLookup } from '../soc/socLookup'
@@ -163,11 +163,14 @@ export function Clients() {
         title="Clients"
         subtitle="Gérez vos clients et vos contacts"
         actions={
-          canEdit ? (
-            <Button className="w-auto" onClick={openCreate}>
-              + Nouveau client
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit ? (
+              <Button className="w-auto" onClick={openCreate}>
+                + Nouveau client
+              </Button>
+            ) : null}
+          </>
         }
       />
 

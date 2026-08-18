@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { consultantsApi } from '../api/consultants'
 import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
-import { Button, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
 import {
   Badge,
   EmptyState,
@@ -226,16 +226,19 @@ export function Consultants() {
         title="Consultants"
         subtitle="Gérez votre équipe de consultants"
         actions={
-          canEdit ? (
-            <>
-              <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') }) }}>
-                Importer CSV
-              </InlineButton>
-              <Button className="w-auto" onClick={openCreate}>
-                + Nouveau consultant
-              </Button>
-            </>
-          ) : undefined
+          <>
+            <RefreshButton onClick={reload} />
+            {canEdit ? (
+              <>
+                <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') }) }}>
+                  Importer CSV
+                </InlineButton>
+                <Button className="w-auto" onClick={openCreate}>
+                  + Nouveau consultant
+                </Button>
+              </>
+            ) : null}
+          </>
         }
       />
 

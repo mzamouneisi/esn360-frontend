@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { socHolidaysApi } from '../api/socHolidays'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { Button, Card, InlineButton } from '../components/ui'
+import { Button, Card, InlineButton, RefreshButton } from '../components/ui'
 import { ErrorBlock, PageHeader } from '../components/data'
 import type { SocHolidayDto } from '../api/types'
 
@@ -31,6 +31,7 @@ export function Holidays() {
   const [holidays, setHolidays] = useState<SocHolidayDto[]>([])
   const [error, setError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [tick, setTick] = useState(0)
 
   const year = cursor.getFullYear()
   const month = cursor.getMonth()
@@ -49,7 +50,7 @@ export function Holidays() {
     return () => {
       cancelled = true
     }
-  }, [year])
+  }, [year, tick])
 
   const byDate = useMemo(() => {
     const map = new Map<string, SocHolidayDto>()
@@ -132,6 +133,7 @@ export function Holidays() {
             <InlineButton onClick={goPrev}>Préc</InlineButton>
             <InlineButton onClick={goToday}>Aujourd'hui</InlineButton>
             <InlineButton onClick={goNext}>Suiv</InlineButton>
+            <RefreshButton onClick={() => setTick((t) => t + 1)} label="" />
           </div>
           <h2 className="text-lg font-semibold text-gray-900">
             {MONTHS_FR[month]} {year}

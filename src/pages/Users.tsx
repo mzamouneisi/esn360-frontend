@@ -4,7 +4,7 @@ import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import type { SocDto, UserDto } from '../api/types'
 import { useAsync } from '../lib/useAsync'
-import { Button, Field, Input, InlineButton, Select, Spinner } from '../components/ui'
+import { Button, Field, Input, InlineButton, RefreshButton, Select, Spinner } from '../components/ui'
 import {
   Badge,
   EmptyState,
@@ -44,7 +44,7 @@ export function Users() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data, loading, error, setData } = useAsync(
+  const { data, loading, error, setData, reload } = useAsync(
     () => usersApi.findAll({ page, size, search: debounced || undefined }),
     [page, size, debounced],
   )
@@ -137,7 +137,11 @@ export function Users() {
 
   return (
     <div>
-      <PageHeader title="Utilisateurs" subtitle="Comptes de la plateforme (administration)" />
+      <PageHeader
+        title="Utilisateurs"
+        subtitle="Comptes de la plateforme (administration)"
+        actions={<RefreshButton onClick={reload} />}
+      />
 
       <div className="mb-4">
         <Input
