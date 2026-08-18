@@ -135,11 +135,36 @@ export function CraList() {
     }
   }
 
+  async function findFreePeriod(type: string): Promise<{ year: number; month: number }> {
+    const consultantId = user?.consultantId
+    if (!consultantId) return { year, month }
+    let y = year
+    let m = month
+    for (let i = 0; i < 24; i++) {
+      const cras = y === year ? (data ?? []) : await crasApi.findByConsultant(consultantId, y)
+      const existing = cras.find((c) => c.year === y && c.month === m && c.type === type)
+      if (!existing || existing.status === 'DRAFT' || existing.status === 'REJECTED') {
+        return { year: y, month: m }
+      }
+      m++
+      if (m > 12) {
+        m = 1
+        y++
+      }
+    }
+    return { year, month }
+  }
+
   async function createCra(type: string) {
     if (!user?.consultantId) return
     try {
-      const cra = await crasApi.getOrCreate(user.consultantId, year, month, type)
+      const period = await findFreePeriod(type)
+      const cra = await crasApi.getOrCreate(user.consultantId, period.year, period.month, type)
       setOpenCraId(cra.id)
+      if (period.year !== year || period.month !== month) {
+        setYear(period.year)
+        setMonth(period.month)
+      }
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
     }
@@ -245,7 +270,7 @@ export function CraList() {
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {pageItems.map((cra) => (
                     <tr key={cra.id} className="align-top">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                      <td className={`whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 ${cra.type === 'CONGE' ? 'bg-yellow-100' : ''}`}>
                         {cra.year}-{String(cra.month).padStart(2, '0')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
@@ -363,11 +388,11 @@ export function CraList() {
       </Card>
 
       {isConsultant && user.consultantId && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex items-center justify-center gap-3">
           <Button className="w-auto" onClick={() => createCra('CRA')}>
             Nouveau Cra
           </Button>
-          <Button className="w-auto" onClick={() => createCra('CONGE')}>
+          <Button className="w-auto" variant="yellow" onClick={() => createCra('CONGE')}>
             Nouveau Congé
           </Button>
         </div>

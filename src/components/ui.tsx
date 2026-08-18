@@ -38,13 +38,19 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 
 export function Button({
   className = '',
+  variant = 'primary',
   children,
   disabled,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'yellow' | 'green' }) {
+  const variants = {
+    primary: 'bg-brand-600 hover:bg-brand-700',
+    yellow: 'bg-yellow-500 hover:bg-yellow-600',
+    green: 'bg-green-600 hover:bg-green-700',
+  }
   return (
     <button
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
       disabled={disabled}
       {...rest}
     >

@@ -5,7 +5,7 @@ import { crasApi } from '../api/cras'
 import { activitiesApi } from '../api/activities'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, InlineButton, Select, Spinner } from '../components/ui'
+import { Button, Card, Field, InlineButton, Input, Select, Spinner } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, Modal } from '../components/data'
 import {
   CRA_STATUS_LABELS,
@@ -131,6 +131,7 @@ export function CraDetail({
   const [formError, setFormError] = useState<string | null>(null)
   const [eventModal, setEventModal] = useState<number | null>(null)
   const [fillMonthOpen, setFillMonthOpen] = useState(false)
+  const [fillRangeOpen, setFillRangeOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [exchanges, setExchanges] = useState<CraExchangeDto[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -369,6 +370,37 @@ export function CraDetail({
     setFillMonthOpen(false)
   }
 
+  function handleFillRange(start: string, end: string, activityId: string) {
+    if (!activityId) {
+      setFormError('Choisissez une activité.')
+      return
+    }
+    if (!start || !end) {
+      setFormError('Indiquez les dates de début et de fin.')
+      return
+    }
+    const fillable = days.filter(
+      (d) => d.date >= start && d.date <= end && d.dayType === 'WORKED' && d.activities.length === 0,
+    )
+    if (fillable.length === 0) {
+      setFormError('Aucune cellule à remplir dans cette plage (déjà remplie, week-end ou jour férié).')
+      setFillRangeOpen(false)
+      return
+    }
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.date < start || d.date > end) return d
+        if (d.dayType !== 'WORKED' || d.activities.length > 0) return d
+        return {
+          ...d,
+          activities: [{ activityId, days: '1', comment: '' }],
+        }
+      }),
+    )
+    setFormError(null)
+    setFillRangeOpen(false)
+  }
+
   const firstDay = new Date(cra.year, cra.month - 1, 1)
   const startOffset = (firstDay.getDay() + 6) % 7
   const daysInMonth = new Date(cra.year, cra.month, 0).getDate()
@@ -445,6 +477,9 @@ export function CraDetail({
             <Button className="w-auto" onClick={() => setFillMonthOpen(true)}>
               Remplir tout le mois
             </Button>
+            <InlineButton onClick={() => setFillRangeOpen(true)}>
+              Remplir une plage
+            </InlineButton>
             <InlineButton
               className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
               onClick={handleDeleteAll}
@@ -726,6 +761,18 @@ export function CraDetail({
         />
       )}
 
+      {fillRangeOpen && (
+        <FillRangeModal
+          activities={monthActivities}
+          monthStart={`${cra.year}-${String(cra.month).padStart(2, '0')}-01`}
+          monthEnd={`${cra.year}-${String(cra.month).padStart(2, '0')}-${String(
+            new Date(cra.year, cra.month, 0).getDate(),
+          ).padStart(2, '0')}`}
+          onFill={handleFillRange}
+          onClose={() => setFillRangeOpen(false)}
+        />
+      )}
+
       {historyOpen && (
         <HistoryModal
           exchanges={exchanges}
@@ -835,6 +882,92 @@ function FillMonthModal({
           ))}
         </div>
       )}
+    </Modal>
+  )
+}
+
+function FillRangeModal({
+  activities,
+  monthStart,
+  monthEnd,
+  onFill,
+  onClose,
+}: {
+  activities: ActivityDto[]
+  monthStart: string
+  monthEnd: string
+  onFill: (start: string, end: string, activityId: string) => void
+  onClose: () => void
+}) {
+  const [start, setStart] = useState(monthStart)
+  const [end, setEnd] = useState(monthEnd)
+  const [activityId, setActivityId] = useState('')
+
+  return (
+    <Modal
+      open
+      title="Remplir une plage"
+      onClose={onClose}
+      footer={
+        <>
+          <InlineButton onClick={onClose}>Annuler</InlineButton>
+          <Button className="w-auto" onClick={() => onFill(start, end, activityId)}>
+            Remplir
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Date de début">
+            <Input
+              type="date"
+              min={monthStart}
+              max={monthEnd}
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
+          </Field>
+          <Field label="Date de fin">
+            <Input
+              type="date"
+              min={monthStart}
+              max={monthEnd}
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+            />
+          </Field>
+        </div>
+        <div>
+          <p className="mb-2 text-sm text-gray-500">Activité :</p>
+          {activities.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-center text-sm text-gray-400">
+              Aucune activité correspondant à ce mois.
+            </p>
+          ) : (
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {activities.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setActivityId(String(a.id))}
+                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                    activityId === String(a.id)
+                      ? 'border-brand-500 bg-brand-50'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: a.type?.color ?? '#9ca3af' }}
+                  />
+                  <span className="font-medium text-gray-800">{a.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </Modal>
   )
 }
