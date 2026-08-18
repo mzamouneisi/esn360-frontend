@@ -24,6 +24,8 @@ export function Settings() {
   const { user, refreshMe } = useAuth()
   const [size, setSize] = useState<number>(user?.fontSize ?? 14)
   const [theme, setTheme] = useState<string>(user?.theme || 'ocean')
+  const [headerColor, setHeaderColor] = useState<string>(user?.tableHeaderColor || '#f9fafb')
+  const [borderColor, setBorderColor] = useState<string>(user?.tableBorderColor || '#e5e7eb')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -31,7 +33,11 @@ export function Settings() {
   if (!user) return null
   const u = user
 
-  const changed = size !== (u.fontSize ?? 14) || (u.theme || 'ocean') !== theme
+  const changed =
+    size !== (u.fontSize ?? 14) ||
+    (u.theme || 'ocean') !== theme ||
+    (u.tableHeaderColor || '#f9fafb') !== headerColor ||
+    (u.tableBorderColor || '#e5e7eb') !== borderColor
 
   async function handleSave() {
     setSaving(true)
@@ -43,6 +49,10 @@ export function Settings() {
       }
       if ((u.theme || 'ocean') !== theme) {
         await authApi.updateTheme(theme)
+      }
+      if ((u.tableHeaderColor || '#f9fafb') !== headerColor ||
+          (u.tableBorderColor || '#e5e7eb') !== borderColor) {
+        await authApi.updateTableColors(headerColor, borderColor)
       }
       await refreshMe()
       setSaved(true)
@@ -122,6 +132,65 @@ export function Settings() {
           style={{ backgroundColor: 'var(--brand-50)', color: 'var(--brand-800)' }}
         >
           Aperçu : ceci est un exemple de texte aux couleurs du thème.
+        </div>
+
+        <h3 className="mt-8 text-sm font-semibold text-gray-900">Couleurs des tables</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Personnalisez la couleur d'en-tête et la bordure des tableaux de l'application.
+        </p>
+        <div className="mt-4 flex flex-wrap items-end gap-6">
+          <Field label="Couleur d'en-tête">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={headerColor}
+                onChange={(e) => {
+                  setHeaderColor(e.target.value)
+                  setSaved(false)
+                }}
+                className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-white p-1"
+              />
+              <span className="text-sm text-gray-500">{headerColor}</span>
+            </div>
+          </Field>
+          <Field label="Couleur de bordure">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={borderColor}
+                onChange={(e) => {
+                  setBorderColor(e.target.value)
+                  setSaved(false)
+                }}
+                className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-white p-1"
+              />
+              <span className="text-sm text-gray-500">{borderColor}</span>
+            </div>
+          </Field>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-xl border" style={{ borderColor: borderColor }}>
+          <table className="min-w-full divide-y" style={{ borderColor: borderColor }}>
+            <thead style={{ backgroundColor: headerColor }}>
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Exemple
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Aperçu
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y bg-white">
+              <tr>
+                <td className="px-4 py-2 text-sm text-gray-700">Ligne 1</td>
+                <td className="px-4 py-2 text-sm text-gray-700">Contenu</td>
+              </tr>
+              <tr className="even:bg-gray-50">
+                <td className="px-4 py-2 text-sm text-gray-700">Ligne 2</td>
+                <td className="px-4 py-2 text-sm text-gray-700">Contenu</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <Button

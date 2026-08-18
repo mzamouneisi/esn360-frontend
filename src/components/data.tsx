@@ -98,10 +98,13 @@ export function Table<T>({
     return empty ?? <EmptyState title="Aucun élément" description="Aucune donnée à afficher." />
   }
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div
+      className="overflow-hidden rounded-xl border bg-white shadow-sm"
+      style={{ borderColor: 'var(--table-border)' }}
+    >
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead style={{ backgroundColor: 'var(--table-header)' }}>
             <tr>
               {columns.map((col) => (
                 <th
@@ -118,7 +121,7 @@ export function Table<T>({
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={onRowClick ? 'cursor-pointer transition hover:bg-gray-50' : ''}
+                className={`even:bg-gray-50 ${onRowClick ? 'cursor-pointer transition hover:bg-gray-100' : ''}`}
               >
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-sm text-gray-700">

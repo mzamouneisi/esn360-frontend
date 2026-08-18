@@ -75,6 +75,8 @@ export const authApi = {
     api.put<UserDto>('/auth/me/font-size', { fontSize }),
   updateTheme: (theme: string) =>
     api.put<UserDto>('/auth/me/theme', { theme }),
+  updateTableColors: (tableHeaderColor: string, tableBorderColor: string) =>
+    api.put<UserDto>('/auth/me/table-colors', { tableHeaderColor, tableBorderColor }),
   mySocs: () => api.get<SocLiteDto[]>('/auth/me/socs'),
   addSoc: (payload: AddSocPayload) =>
     api.post<SocLiteDto>('/auth/me/socs', payload),

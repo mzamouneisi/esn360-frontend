@@ -166,6 +166,11 @@ body {
   background-color: #f4f5f7;
 }
 
+:root {
+  --table-header: #f9fafb;
+  --table-border: #e5e7eb;
+}
+
 .font_last_commit {
   font-size: 14px;
   color: azure;

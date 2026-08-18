@@ -70,6 +70,8 @@ export interface UserDto {
   lastLoginAt: string | null
   fontSize: number
   theme: string
+  tableHeaderColor: string
+  tableBorderColor: string
 }
 
 export interface AuthResponse {

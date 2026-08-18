@@ -247,7 +247,7 @@ export function CraList() {
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead style={{ backgroundColor: 'var(--table-header)' }}>
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                       Année-mois
@@ -279,7 +279,7 @@ export function CraList() {
                   {pageItems.map((cra) => (
                     <tr
                       key={cra.id}
-                      className={`align-top ${cra.type === 'CONGE' ? 'bg-yellow-100' : ''}`}
+                      className={`align-top ${cra.type === 'CONGE' ? 'bg-yellow-100' : 'even:bg-gray-50'}`}
                     >
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
                         {cra.year}-{String(cra.month).padStart(2, '0')}

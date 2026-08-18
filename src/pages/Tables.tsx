@@ -321,7 +321,7 @@ export function Tables() {
           {!loading && rows.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+                <thead style={{ backgroundColor: 'var(--table-header)' }}>
                   <tr>
                     {columns.map((c) => (
                       <th
@@ -339,7 +339,7 @@ export function Tables() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((row, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
+                    <tr key={i} className="even:bg-gray-50 hover:bg-gray-100">
                       {columns.map((c) => (
                         <td
                           key={c.columnName}
@@ -391,7 +391,7 @@ export function Tables() {
           {!sqlLoading && sqlResult && sqlResult.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+                <thead style={{ backgroundColor: 'var(--table-header)' }}>
                   <tr>
                     {sqlColumns.map((col) => (
                       <th
@@ -405,7 +405,7 @@ export function Tables() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {sqlResult.map((row, i) => (
-                    <tr key={i}>
+                    <tr key={i} className="even:bg-gray-50">
                       {sqlColumns.map((col) => (
                         <td
                           key={col}

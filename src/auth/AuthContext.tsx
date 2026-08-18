@@ -31,7 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const doc = document.documentElement
     doc.style.fontSize = `${user?.fontSize && user.fontSize > 0 ? user.fontSize : 14}px`
     doc.dataset.theme = user?.theme || 'ocean'
-  }, [user?.fontSize, user?.theme])
+    doc.style.setProperty('--table-header', user?.tableHeaderColor || '#f9fafb')
+    doc.style.setProperty('--table-border', user?.tableBorderColor || '#e5e7eb')
+  }, [user?.fontSize, user?.theme, user?.tableHeaderColor, user?.tableBorderColor])
 
   useEffect(() => {
     setUnauthorizedHandler(() => {

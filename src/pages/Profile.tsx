@@ -331,7 +331,7 @@ export function Profile() {
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead style={{ backgroundColor: 'var(--table-header)' }}>
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Date
@@ -349,7 +349,7 @@ export function Profile() {
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
                 {(connections ?? []).map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} className="even:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(c.loginTime)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{c.ipAddress}</td>
                     <td className="max-w-xs truncate px-4 py-3 text-sm text-gray-500">{c.userAgent}</td>
