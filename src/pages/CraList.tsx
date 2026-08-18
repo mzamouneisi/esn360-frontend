@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { crasApi } from '../api/cras'
 import type { CraDto } from '../api/types'
@@ -13,6 +12,7 @@ import {
   formatDate,
 } from '../lib/format'
 import { useAsync } from '../lib/useAsync'
+import { CraDetail } from './CraDetail'
 
 const PAGE_SIZE = 5
 
@@ -23,12 +23,12 @@ function shiftMonth(year: number, month: number, delta: number): { year: number;
 
 export function CraList() {
   const { user } = useAuth()
-  const navigate = useNavigate()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [exporting, setExporting] = useState<null | 'csv' | 'pdf'>(null)
   const [page, setPage] = useState(0)
+  const [openCraId, setOpenCraId] = useState<number | null>(null)
 
   const isConsultant = user?.role === 'CONSULTANT'
   const canValidate =
@@ -45,9 +45,9 @@ export function CraList() {
   const socCras = useAsync(
     () =>
       user?.socId
-        ? crasApi.findByMonth(year, month, user.socId)
+        ? crasApi.findBySocYear(user.socId, year)
         : Promise.resolve([] as CraDto[]),
-    [user?.socId, year, month],
+    [user?.socId, year],
   )
 
   const { data, loading, error, reload } = isConsultant ? ownCras : socCras
@@ -58,28 +58,38 @@ export function CraList() {
 
   if (!user) return null
 
-  const list = (data ?? []).filter((c) => c.month === month)
+  const list = data ?? []
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages - 1)
   const pageItems = list.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
 
   const editable = (c: CraDto) => c.status !== 'SUBMITTED' && c.status !== 'VALIDATED'
 
+  async function openPeriod(newYear: number, newMonth: number) {
+    setYear(newYear)
+    setMonth(newMonth)
+    if (isConsultant && user?.consultantId) {
+      try {
+        const cra = await crasApi.getOrCreate(user.consultantId, newYear, newMonth)
+        setOpenCraId(cra.id)
+      } catch (err) {
+        window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+      }
+    }
+  }
+
   function goPrev() {
     const p = shiftMonth(year, month, -1)
-    setYear(p.year)
-    setMonth(p.month)
+    void openPeriod(p.year, p.month)
   }
 
   function goToday() {
-    setYear(now.getFullYear())
-    setMonth(now.getMonth() + 1)
+    void openPeriod(now.getFullYear(), now.getMonth() + 1)
   }
 
   function goNext() {
     const p = shiftMonth(year, month, 1)
-    setYear(p.year)
-    setMonth(p.month)
+    void openPeriod(p.year, p.month)
   }
 
   async function changeStatus(id: number, action: 'validate' | 'reject') {
@@ -112,6 +122,7 @@ export function CraList() {
       return
     try {
       await crasApi.delete(c.id)
+      if (openCraId === c.id) setOpenCraId(null)
       reload()
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
@@ -122,7 +133,7 @@ export function CraList() {
     if (!user?.consultantId) return
     try {
       const cra = await crasApi.getOrCreate(user.consultantId, year, month)
-      navigate(`/cras/${cra.id}`)
+      setOpenCraId(cra.id)
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
     }
@@ -164,60 +175,14 @@ export function CraList() {
         }
       />
 
-      <Card className="mb-6 flex flex-wrap items-center gap-3 p-4">
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          Période :
-          <Select
-            className="w-auto"
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-          >
-            {MONTHS_FR.map((label, i) => (
-              <option key={i + 1} value={i + 1}>
-                {label}
-              </option>
-            ))}
-          </Select>
-          <Select
-            className="w-auto"
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-          >
-            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <div className="flex items-center gap-1">
-          <InlineButton onClick={goPrev} title="Mois précédent">
-            ◀
-          </InlineButton>
-          <InlineButton onClick={goToday} title="Revenir au mois actuel">
-            auj
-          </InlineButton>
-          <InlineButton onClick={goNext} title="Mois suivant">
-            ▶
-          </InlineButton>
-        </div>
-        {isConsultant && (
-          <p className="ml-auto text-sm text-gray-500">
-            Vos CRA pour l'année {year}. Sélectionnez un mois pour enregistrer votre activité.
-          </p>
-        )}
-      </Card>
-
       {error && <ErrorBlock message={error} />}
       {loading && <LoadingBlock />}
 
       {!loading && list.length === 0 && (
         <Card className="flex flex-col items-center justify-center py-14">
-          <p className="text-sm font-medium text-gray-900">Aucun CRA pour cette période</p>
+          <p className="text-sm font-medium text-gray-900">Aucun CRA pour cette année</p>
           <p className="mt-1 text-sm text-gray-500">
-            {isConsultant
-              ? 'Cliquez sur « Nouveau CRA » pour créer votre CRA de ce mois.'
-              : 'Aucun CRA soumis ou saisi ce mois-ci.'}
+            {isConsultant ? 'Cliquez sur « Nouveau Cra » pour créer votre CRA.' : 'Aucun CRA saisi.'}
           </p>
         </Card>
       )}
@@ -281,7 +246,7 @@ export function CraList() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
-                          <InlineButton onClick={() => navigate(`/cras/${cra.id}`)}>
+                          <InlineButton onClick={() => setOpenCraId(cra.id)}>
                             {editable(cra) ? 'Éditer' : 'Ouvrir'}
                           </InlineButton>
                           {editable(cra) && (
@@ -337,10 +302,62 @@ export function CraList() {
       )}
 
       {isConsultant && user.consultantId && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4">
           <Button className="w-auto" onClick={createCra}>
-            Nouveau CRA
+            Nouveau Cra
           </Button>
+        </div>
+      )}
+
+      <Card className="mt-4 flex flex-wrap items-center gap-3 p-4">
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          Période :
+          <Select
+            className="w-auto"
+            value={month}
+            onChange={(e) => void openPeriod(year, Number(e.target.value))}
+          >
+            {MONTHS_FR.map((label, i) => (
+              <option key={i + 1} value={i + 1}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            className="w-auto"
+            value={year}
+            onChange={(e) => void openPeriod(Number(e.target.value), month)}
+          >
+            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <div className="flex items-center gap-1">
+          <InlineButton onClick={goPrev} title="Mois précédent">
+            ◀
+          </InlineButton>
+          <InlineButton onClick={goToday} title="Revenir au mois actuel">
+            auj
+          </InlineButton>
+          <InlineButton onClick={goNext} title="Mois suivant">
+            ▶
+          </InlineButton>
+        </div>
+      </Card>
+
+      {openCraId != null && (
+        <div className="mt-6">
+          <CraDetail
+            id={openCraId}
+            onClose={() => {
+              setOpenCraId(null)
+              reload()
+            }}
+            onChange={reload}
+          />
         </div>
       )}
     </div>

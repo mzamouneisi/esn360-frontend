@@ -20,7 +20,7 @@ import { Consultants } from './pages/Consultants'
 import { Activities } from './pages/Activities'
 import { ActivityTypes } from './pages/ActivityTypes'
 import { CraList } from './pages/CraList'
-import { CraDetail } from './pages/CraDetail'
+import { CraDetailRoute } from './pages/CraDetail'
 import { NoteFraisList } from './pages/NoteFraisList'
 import { Facturation } from './pages/Facturation'
 import { FichePaie } from './pages/FichePaie'
@@ -115,7 +115,7 @@ const router = createBrowserRouter(
               ),
             },
             { path: '/cras', element: <CraList /> },
-            { path: '/cras/:id', element: <CraDetail /> },
+            { path: '/cras/:id', element: <CraDetailRoute /> },
             { path: '/notes-frais', element: <NoteFraisList /> },
             {
               path: '/facturation',

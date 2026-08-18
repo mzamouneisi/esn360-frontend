@@ -7,8 +7,9 @@ import type { CraDto, UserDto } from '../api/types'
 
 const {
   findByConsultantMock,
-  findByMonthMock,
+  findBySocYearMock,
   getOrCreateMock,
+  getByIdMock,
   validateMock,
   rejectMock,
   deleteMock,
@@ -17,8 +18,9 @@ const {
   userMock,
 } = vi.hoisted(() => ({
   findByConsultantMock: vi.fn(),
-  findByMonthMock: vi.fn(),
+  findBySocYearMock: vi.fn(),
   getOrCreateMock: vi.fn(),
+  getByIdMock: vi.fn(),
   validateMock: vi.fn(),
   rejectMock: vi.fn(),
   deleteMock: vi.fn(),
@@ -38,17 +40,24 @@ vi.mock('../auth/AuthContext', () => ({
   }),
 }))
 
+vi.mock('../api/activities', () => ({
+  activitiesApi: {
+    findAll: vi.fn().mockResolvedValue([]),
+  },
+}))
+
 vi.mock('../api/cras', () => ({
   crasApi: {
     getOrCreate: getOrCreateMock,
-    getById: vi.fn(),
+    getById: getByIdMock,
     findByConsultant: findByConsultantMock,
-    findByMonth: findByMonthMock,
+    findBySocYear: findBySocYearMock,
     save: vi.fn(),
     submit: vi.fn(),
     validate: validateMock,
     reject: rejectMock,
     delete: deleteMock,
+    exchanges: vi.fn(),
     exportCsv: exportCsvMock,
     exportPdf: exportPdfMock,
   },
@@ -97,6 +106,7 @@ const cra = (overrides: Partial<CraDto> = {}): CraDto => ({
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.clearAllMocks()
   userMock.value = null as unknown as UserDto
 })
 
@@ -109,9 +119,9 @@ function renderList() {
 }
 
 describe('CraList', () => {
-  it('affiche les CRA du mois sélectionné pour un manager', async () => {
+  it('affiche les CRA de l’année pour un manager', async () => {
     userMock.value = managerUser
-    findByMonthMock.mockResolvedValue([
+    findBySocYearMock.mockResolvedValue([
       cra(),
       cra({ id: 2, consultantName: 'Bob Dupont', month: 7 }),
     ])
@@ -119,17 +129,17 @@ describe('CraList', () => {
     renderList()
 
     expect(await screen.findByText('Alice Martin')).toBeInTheDocument()
-    expect(findByMonthMock).toHaveBeenCalledWith(2026, 8, 5)
+    expect(findBySocYearMock).toHaveBeenCalledWith(5, 2026)
     expect(screen.getAllByText('Soumis').length).toBeGreaterThan(0)
-    expect(screen.getByText('21 j')).toBeInTheDocument()
-    expect(screen.queryByText('Bob Dupont')).not.toBeInTheDocument()
+    expect(screen.getAllByText('21 j').length).toBeGreaterThan(0)
+    expect(screen.getByText('Bob Dupont')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exporter CSV' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exporter PDF' })).toBeInTheDocument()
   })
 
   it('valide un CRA soumis', async () => {
     userMock.value = managerUser
-    findByMonthMock.mockResolvedValue([cra()])
+    findBySocYearMock.mockResolvedValue([cra()])
     validateMock.mockResolvedValue(cra({ status: 'VALIDATED' }))
 
     renderList()
@@ -141,7 +151,7 @@ describe('CraList', () => {
 
   it('rejette un CRA avec le motif saisi', async () => {
     userMock.value = managerUser
-    findByMonthMock.mockResolvedValue([cra()])
+    findBySocYearMock.mockResolvedValue([cra()])
     rejectMock.mockResolvedValue(cra({ status: 'REJECTED' }))
     vi.stubGlobal('prompt', vi.fn().mockReturnValue('Facture en double'))
 
@@ -154,7 +164,7 @@ describe('CraList', () => {
 
   it('supprime un CRA non soumis et n’affiche pas l’action pour un CRA soumis', async () => {
     userMock.value = managerUser
-    findByMonthMock.mockResolvedValue([
+    findBySocYearMock.mockResolvedValue([
       cra({ status: 'DRAFT', consultantName: 'Carla Draft' }),
       cra({ id: 2, consultantName: 'Bob Soumis', status: 'SUBMITTED' }),
     ])
@@ -176,7 +186,7 @@ describe('CraList', () => {
 
   it('exporte les CRA en CSV et PDF', async () => {
     userMock.value = managerUser
-    findByMonthMock.mockResolvedValue([cra()])
+    findBySocYearMock.mockResolvedValue([cra()])
     exportCsvMock.mockResolvedValue(undefined)
     exportPdfMock.mockResolvedValue(undefined)
 
@@ -197,19 +207,20 @@ describe('CraList', () => {
     userMock.value = consultantUser
     findByConsultantMock.mockResolvedValue([])
     getOrCreateMock.mockResolvedValue(cra({ id: 99 }))
+    getByIdMock.mockResolvedValue(cra({ id: 99 }))
 
     renderList()
 
-    expect(await screen.findByText('Aucun CRA pour cette période')).toBeInTheDocument()
+    expect(await screen.findByText('Aucun CRA pour cette année')).toBeInTheDocument()
     expect(findByConsultantMock).toHaveBeenCalledWith(10, 2026)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Nouveau CRA' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau Cra' }))
 
     await waitFor(() => expect(getOrCreateMock).toHaveBeenCalledWith(10, 2026, 8))
     expect(screen.queryByRole('button', { name: 'Exporter CSV' })).not.toBeInTheDocument()
   })
 
-  it('affiche uniquement le CRA du mois sélectionné pour un consultant', async () => {
+  it('affiche tous les CRA de l’année pour un consultant sans action de validation', async () => {
     userMock.value = consultantUser
     findByConsultantMock.mockResolvedValue([
       cra(),
@@ -219,14 +230,14 @@ describe('CraList', () => {
     renderList()
 
     expect(await screen.findByText('Alice Martin')).toBeInTheDocument()
-    expect(screen.queryByText('Bob Dupont')).not.toBeInTheDocument()
+    expect(screen.getByText('Bob Dupont')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Valider' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rejeter' })).not.toBeInTheDocument()
   })
 
   it('affiche l’erreur API dans un bloc d’erreur', async () => {
     userMock.value = managerUser
-    findByMonthMock.mockRejectedValue(new ApiError(500, 'Erreur serveur'))
+    findBySocYearMock.mockRejectedValue(new ApiError(500, 'Erreur serveur'))
 
     renderList()
 

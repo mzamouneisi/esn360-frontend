@@ -10,6 +10,8 @@ export const crasApi = {
     api.get<CraDto[]>(`/cras/consultant/${consultantId}/${year}`),
   findByMonth: (year: number, month: number, socId?: number) =>
     api.get<CraDto[]>(`/cras/month/${year}/${month}`, { socId }),
+  findBySocYear: (socId: number, year: number) =>
+    api.get<CraDto[]>(`/cras/soc/${socId}/${year}`),
   save: (id: number, request: SaveCraRequest) =>
     api.put<CraDto>(`/cras/${id}/days`, request),
   submit: (id: number) => api.post<CraDto>(`/cras/${id}/submit`),

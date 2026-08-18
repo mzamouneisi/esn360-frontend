@@ -88,13 +88,20 @@ function ActivityChip({
   )
 }
 
-export function CraDetail() {
-  const { id } = useParams<{ id: string }>()
+export function CraDetail({
+  id,
+  onClose,
+  onChange,
+}: {
+  id: number
+  onClose?: () => void
+  onChange?: () => void
+}) {
   const navigate = useNavigate()
   const { user } = useAuth()
 
   const { data: cra, loading, error, setData } = useAsync(
-    () => crasApi.getById(Number(id)),
+    () => crasApi.getById(id),
     [id],
   )
 
@@ -252,6 +259,7 @@ export function CraDetail() {
       }
       const updated = await crasApi.save(cra.id, request)
       setData(updated)
+      onChange?.()
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
     } finally {
@@ -271,6 +279,7 @@ export function CraDetail() {
       await handleSave()
       const updated = await crasApi.submit(cra.id)
       setData(updated)
+      onChange?.()
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
     } finally {
@@ -283,6 +292,7 @@ export function CraDetail() {
     try {
       const updated = await crasApi.validate(cra.id)
       setData(updated)
+      onChange?.()
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
     }
@@ -295,6 +305,7 @@ export function CraDetail() {
     try {
       const updated = await crasApi.reject(cra.id, comment)
       setData(updated)
+      onChange?.()
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
     }
@@ -356,10 +367,10 @@ export function CraDetail() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <button
-            onClick={() => navigate('/cras')}
+            onClick={() => (onClose ? onClose() : navigate('/cras'))}
             className="text-sm font-medium text-brand-600 hover:text-brand-700"
           >
-            ← Retour aux CRA
+            {onClose ? '← Fermer' : '← Retour aux CRA'}
           </button>
           <h2 className="mt-1 text-2xl font-bold text-gray-900">
             CRA de {cra.consultantName ?? '—'}
@@ -953,4 +964,9 @@ function EventModal({
       </div>
     </Modal>
   )
+}
+
+export function CraDetailRoute() {
+  const { id } = useParams<{ id: string }>()
+  return <CraDetail id={Number(id)} />
 }
