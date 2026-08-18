@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { crasApi } from '../api/cras'
 import { activitiesApi } from '../api/activities'
+import { holidaysApi } from '../api/holidays'
+import { socHolidaysApi } from '../api/socHolidays'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
@@ -135,10 +137,42 @@ export function CraDetail({
   const [historyOpen, setHistoryOpen] = useState(false)
   const [exchanges, setExchanges] = useState<CraExchangeDto[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     if (cra) setDays(cra.days.map(dayToEditable))
   }, [cra])
+
+  useEffect(() => {
+    if (!cra) return
+    let cancelled = false
+    setHolidays(new Map())
+    Promise.all([
+      holidaysApi.findByCountryYear('FR', cra.year).catch(() => []),
+      socHolidaysApi.list(cra.year).catch(() => []),
+    ]).then(([national, soc]) => {
+      if (cancelled) return
+      const map = new Map<string, string>()
+      for (const h of national) map.set(h.date, h.label)
+      for (const h of soc) map.set(h.date, h.label)
+      setHolidays(map)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [cra?.year])
+
+  useEffect(() => {
+    if (holidays.size === 0) return
+    setDays((prev) =>
+      prev.map((d) => {
+        if (holidays.has(d.date) && d.dayType === 'WORKED' && d.activities.length === 0) {
+          return { ...d, dayType: 'PUBLIC_HOLIDAY' }
+        }
+        return d
+      }),
+    )
+  }, [holidays])
 
   const activityMap = useMemo(
     () => new Map((activities ?? []).map((a) => [String(a.id), a])),
@@ -580,7 +614,10 @@ export function CraDetail({
                     })}
                     {day && day.dayType !== 'WORKED' && (
                       <span className="block px-1 text-[11px] font-medium text-gray-400">
-                        {DAY_TYPE_LABELS[day.dayType]} · {formatDays(dayTotal(day))}
+                        {day.dayType === 'PUBLIC_HOLIDAY' && holidays.has(date)
+                          ? holidays.get(date)
+                          : DAY_TYPE_LABELS[day.dayType]}{' '}
+                        · {formatDays(dayTotal(day))}
                       </span>
                     )}
                     {day?.dayType === 'WORKED' && day.activities.length > 0 && (
