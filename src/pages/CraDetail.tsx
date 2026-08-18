@@ -108,6 +108,7 @@ export function CraDetail() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [eventModal, setEventModal] = useState<number | null>(null)
+  const [fillMonthOpen, setFillMonthOpen] = useState(false)
 
   useEffect(() => {
     if (cra) setDays(cra.days.map(dayToEditable))
@@ -133,27 +134,22 @@ export function CraDetail() {
     )
   }, [activities])
 
-  const monthActivity = useMemo(() => {
-    if (!cra) return undefined
+  const monthActivities = useMemo(() => {
+    if (!cra) return []
     const mm = String(cra.month).padStart(2, '0')
     const first = `${cra.year}-${mm}-01`
     const last = `${cra.year}-${mm}-${String(new Date(cra.year, cra.month, 0).getDate()).padStart(2, '0')}`
     const acts = activities ?? []
-    const within = (w: string, list: ActivityDto[]) =>
-      list.find(
-        (a) =>
-          a.active &&
-          (!a.startDate || a.startDate <= w) &&
-          (!a.endDate || a.endDate >= first),
-      )
-    const consultantActs = acts.filter((a) => a.consultant?.id === cra.consultantId)
-    return (
-      within(last, consultantActs) ??
-      consultantActs.find((a) => a.active) ??
-      within(last, acts) ??
-      currentActivity
+    const overlapsMonth = (a: ActivityDto) =>
+      a.active &&
+      (!a.startDate || a.startDate <= last) &&
+      (!a.endDate || a.endDate >= first)
+    const consultantMonth = acts.filter(
+      (a) => a.consultant?.id === cra.consultantId && overlapsMonth(a),
     )
-  }, [activities, cra, currentActivity])
+    if (consultantMonth.length > 0) return consultantMonth
+    return acts.filter(overlapsMonth)
+  }, [activities, cra])
 
   const incompleteDays = useMemo(
     () => days.filter((d) => !dayIsValid(d)),
@@ -305,27 +301,29 @@ export function CraDetail() {
     removeAllEvents()
   }
 
-  function handleFillAllDays() {
-    if (!monthActivity) {
-      setFormError('Aucune activité associée à ce consultant pour remplir le mois.')
+  function handleFillAllDays(activityId: string) {
+    if (!activityId) {
+      setFormError('Aucune activité correspondant à ce mois pour remplir le CRA.')
       return
     }
-    let filled = 0
-    setDays((prev) =>
-      prev.map((d) => {
-        if (d.dayType !== 'WORKED' || d.activities.length > 0) return d
-        filled++
-        return {
-          ...d,
-          activities: [{ activityId: String(monthActivity.id), days: '1', comment: '' }],
-        }
-      }),
+    const emptyWorkedDays = days.filter(
+      (d) => d.dayType === 'WORKED' && d.activities.length === 0,
     )
-    if (filled === 0) {
+    if (emptyWorkedDays.length === 0) {
       setFormError('Tous les jours travaillés du mois sont déjà renseignés.')
     } else {
+      setDays((prev) =>
+        prev.map((d) => {
+          if (d.dayType !== 'WORKED' || d.activities.length > 0) return d
+          return {
+            ...d,
+            activities: [{ activityId, days: '1', comment: '' }],
+          }
+        }),
+      )
       setFormError(null)
     }
+    setFillMonthOpen(false)
   }
 
   const firstDay = new Date(cra.year, cra.month - 1, 1)
@@ -400,7 +398,7 @@ export function CraDetail() {
         </div>
         {editable && (
           <div className="flex flex-wrap items-center gap-2">
-            <Button className="w-auto" onClick={handleFillAllDays}>
+            <Button className="w-auto" onClick={() => setFillMonthOpen(true)}>
               Remplir tout le mois
             </Button>
             <InlineButton
@@ -678,6 +676,14 @@ export function CraDetail() {
         )}
       </div>
 
+      {fillMonthOpen && (
+        <FillMonthModal
+          activities={monthActivities}
+          onSelect={handleFillAllDays}
+          onClose={() => setFillMonthOpen(false)}
+        />
+      )}
+
       {eventModal !== null && eventModal >= 0 && eventModal < days.length && (
         <EventModal
           day={days[eventModal]}
@@ -691,6 +697,54 @@ export function CraDetail() {
         />
       )}
     </div>
+  )
+}
+
+function FillMonthModal({
+  activities,
+  onSelect,
+  onClose,
+}: {
+  activities: ActivityDto[]
+  onSelect: (activityId: string) => void
+  onClose: () => void
+}) {
+  return (
+    <Modal
+      open
+      title="Remplir tout le mois"
+      onClose={onClose}
+      footer={<InlineButton onClick={onClose}>Annuler</InlineButton>}
+    >
+      <p className="mb-3 text-sm text-gray-500">
+        Choisissez l'activité à appliquer à tous les jours travaillés du mois :
+      </p>
+      {activities.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-center text-sm text-gray-400">
+          Aucune activité correspondant à ce mois.
+        </p>
+      ) : (
+        <div className="max-h-96 space-y-2 overflow-y-auto">
+          {activities.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => onSelect(String(a.id))}
+              className="flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm transition hover:bg-gray-50"
+            >
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: a.type?.color ?? '#9ca3af' }}
+              />
+              <span className="font-medium text-gray-800">{a.name}</span>
+              <span className="ml-auto text-xs text-gray-400">
+                {a.startDate ?? '…'} → {a.endDate ?? '…'}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
   )
 }
 
