@@ -326,7 +326,7 @@ export function Tables() {
                     {columns.map((c) => (
                       <th
                         key={c.columnName}
-                        className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        className="whitespace-nowrap px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-500"
                       >
                         {c.columnName}
                         <span className="ml-1 font-normal normal-case text-gray-400">
@@ -396,7 +396,7 @@ export function Tables() {
                     {sqlColumns.map((col) => (
                       <th
                         key={col}
-                        className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        className="whitespace-nowrap px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-500"
                       >
                         {col}
                       </th>

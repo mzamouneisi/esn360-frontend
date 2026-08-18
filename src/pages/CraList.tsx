@@ -249,28 +249,28 @@ export function CraList() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead style={{ backgroundColor: 'var(--table-header)' }}>
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Année-mois
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Consultant
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Statut
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Jours
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Soumis le
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Validé le
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Commentaire
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Actions
                     </th>
                   </tr>

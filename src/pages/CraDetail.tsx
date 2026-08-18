@@ -645,19 +645,19 @@ export function CraDetail({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                     Jour
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                     Total
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                     Evénements
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                     Commentaire
                   </th>
                 </tr>

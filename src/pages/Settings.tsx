@@ -172,10 +172,10 @@ export function Settings() {
           <table className="min-w-full divide-y" style={{ borderColor: borderColor }}>
             <thead style={{ backgroundColor: headerColor }}>
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                   Exemple
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                   Aperçu
                 </th>
               </tr>
