@@ -499,6 +499,13 @@ export interface PublicHolidayDto {
   label: string
 }
 
+export interface SocHolidayDto {
+  id: number
+  socId: number
+  date: string
+  label: string
+}
+
 export interface DashboardOverview {
   user: string
   role: Role

@@ -22,6 +22,7 @@ import { ActivityTypes } from './pages/ActivityTypes'
 import { CraList } from './pages/CraList'
 import { CraDetailRoute } from './pages/CraDetail'
 import { NoteFraisList } from './pages/NoteFraisList'
+import { Holidays } from './pages/Holidays'
 import { Facturation } from './pages/Facturation'
 import { FichePaie } from './pages/FichePaie'
 import { Documents } from './pages/Documents'
@@ -117,6 +118,7 @@ const router = createBrowserRouter(
             { path: '/cras', element: <CraList /> },
             { path: '/cras/:id', element: <CraDetailRoute /> },
             { path: '/notes-frais', element: <NoteFraisList /> },
+            { path: '/jours-feries', element: <Holidays /> },
             {
               path: '/facturation',
               element: (

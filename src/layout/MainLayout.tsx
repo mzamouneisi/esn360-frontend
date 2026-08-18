@@ -40,6 +40,7 @@ const ICONS = {
   activities: 'M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14A9 9 0 1 0 13 3Zm0 8h5a5 5 0 0 1-5 5V11Z',
   cra: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-2 12h-2V7h-2v8h-2V7h-2v8h-2V7H9v8H7v-2H5v4h14v-2Z',
   expenses: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm3.5 8h-7v-2h7Zm-2 6h-3v-2h3Z',
+  holiday: 'M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm0 16H5V8h14v11ZM7 10h5v5H7v-5Z',
   billing: 'M20 8h-3V4H3a2 2 0 0 0-2 2v11h2a2 2 0 1 0 4 0h6a2 2 0 1 0 4 0h4V8l-1-4H5v2h15v10h-4V8Z',
   payslips: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-7 14H7v-2h5v2Zm5-4H7v-2h10v2Zm0-4H7V7h10v2Z',
   documents: 'M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6Zm7 7V3.5L18.5 9H13Zm-1 10c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3Z',
@@ -140,6 +141,7 @@ export function MainLayout() {
       items: [
         { to: '/cras', label: 'CRA', icon: ICONS.cra },
         { to: '/notes-frais', label: 'Notes de frais', icon: ICONS.expenses },
+        { to: '/jours-feries', label: 'Jours fériés', icon: ICONS.holiday },
       ],
     },
     {
