@@ -135,15 +135,15 @@ export function CraList() {
     }
   }
 
-  async function findFreePeriod(type: string): Promise<{ year: number; month: number }> {
+  async function findFreePeriod(): Promise<{ year: number; month: number }> {
     const consultantId = user?.consultantId
     if (!consultantId) return { year, month }
     let y = year
     let m = month
     for (let i = 0; i < 24; i++) {
       const cras = y === year ? (data ?? []) : await crasApi.findByConsultant(consultantId, y)
-      const existing = cras.find((c) => c.year === y && c.month === m && c.type === type)
-      if (!existing || existing.status === 'DRAFT' || existing.status === 'REJECTED') {
+      const cra = cras.find((c) => c.year === y && c.month === m && c.type === 'CRA')
+      if (!cra || cra.status === 'DRAFT' || cra.status === 'REJECTED') {
         return { year: y, month: m }
       }
       m++
@@ -158,7 +158,7 @@ export function CraList() {
   async function createCra(type: string) {
     if (!user?.consultantId) return
     try {
-      const period = await findFreePeriod(type)
+      const period = await findFreePeriod()
       const cra = await crasApi.getOrCreate(user.consultantId, period.year, period.month, type)
       setOpenCraId(cra.id)
       if (period.year !== year || period.month !== month) {
