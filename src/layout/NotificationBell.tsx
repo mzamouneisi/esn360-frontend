@@ -16,14 +16,19 @@ export function NotificationBell() {
 
   useEffect(() => {
     let cancelled = false
-    notificationsApi
-      .unreadCount()
-      .then((n) => {
-        if (!cancelled) setUnread(n)
-      })
-      .catch(() => {})
+    const load = () => {
+      notificationsApi
+        .unreadCount()
+        .then((n) => {
+          if (!cancelled) setUnread(n)
+        })
+        .catch(() => {})
+    }
+    load()
+    const timer = setInterval(load, 30000)
     return () => {
       cancelled = true
+      clearInterval(timer)
     }
   }, [user?.id])
 
