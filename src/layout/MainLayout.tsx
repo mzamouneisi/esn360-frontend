@@ -92,10 +92,14 @@ export function MainLayout() {
   if (!user) return null
 
   const isAdmin = user.role === 'ADMIN'
+  const _LAST_COMMIT_ = '18/08/2026 16:37'
 
   const sections: NavSection[] = [
     {
-      items: [{ to: '/', label: 'Tableau de bord', icon: ICONS.dashboard }],
+      items: [
+        { to: '', label: 'Last Commit : ' + _LAST_COMMIT_, icon: '' },
+        { to: '/', label: 'Tableau de bord', icon: ICONS.dashboard },
+      ],
     },
     {
       title: 'Gestion',
@@ -181,9 +185,6 @@ export function MainLayout() {
             </svg>
             Profil
           </NavLink>
-          <p className="mt-2 text-center text-[20px] text-gray-500">
-            Dernier commit : {__BUILD_DATE__}
-          </p>
         </div>
       </aside>
 

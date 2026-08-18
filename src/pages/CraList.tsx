@@ -7,9 +7,9 @@ import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
 import { Button, Card, InlineButton, Input, Select, Spinner } from '../components/ui'
 import {
   CRA_STATUS_LABELS,
+  formatDate,
   MONTHS_FR,
   statusBadge,
-  formatDate,
 } from '../lib/format'
 import { useAsync } from '../lib/useAsync'
 import { CraDetail } from './CraDetail'
@@ -135,10 +135,10 @@ export function CraList() {
     }
   }
 
-  async function createCra() {
+  async function createCra(type: string) {
     if (!user?.consultantId) return
     try {
-      const cra = await crasApi.getOrCreate(user.consultantId, year, month)
+      const cra = await crasApi.getOrCreate(user.consultantId, year, month, type)
       setOpenCraId(cra.id)
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
@@ -323,14 +323,6 @@ export function CraList() {
         </>
       )}
 
-      {isConsultant && user.consultantId && (
-        <div className="mt-4">
-          <Button className="w-auto" onClick={createCra}>
-            Nouveau Cra
-          </Button>
-        </div>
-      )}
-
       <Card className="mt-4 flex flex-wrap items-center gap-3 p-4">
         <label className="flex items-center gap-2 text-sm text-gray-600">
           Période :
@@ -369,6 +361,17 @@ export function CraList() {
           </InlineButton>
         </div>
       </Card>
+
+      {isConsultant && user.consultantId && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button className="w-auto" onClick={() => createCra('CRA')}>
+            Nouveau Cra
+          </Button>
+          <Button className="w-auto" onClick={() => createCra('CONGE')}>
+            Nouveau Congé
+          </Button>
+        </div>
+      )}
 
       {openCraId != null && (
         <div className="mt-6">

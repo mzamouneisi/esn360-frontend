@@ -342,6 +342,7 @@ export interface CraDto {
   consultantName: string | null
   month: number
   year: number
+  type: string
   status: CraStatus
   totalWorkedDays: number
   totalHours: number

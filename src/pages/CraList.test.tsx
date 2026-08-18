@@ -94,6 +94,7 @@ const cra = (overrides: Partial<CraDto> = {}): CraDto => ({
   consultantName: 'Alice Martin',
   month: 8,
   year: 2026,
+  type: 'CRA',
   status: 'SUBMITTED',
   totalWorkedDays: 21,
   totalHours: 151.5,
@@ -216,7 +217,7 @@ describe('CraList', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Nouveau Cra' }))
 
-    await waitFor(() => expect(getOrCreateMock).toHaveBeenCalledWith(10, 2026, 8))
+    await waitFor(() => expect(getOrCreateMock).toHaveBeenCalledWith(10, 2026, 8, 'CRA'))
     expect(screen.queryByRole('button', { name: 'Exporter CSV' })).not.toBeInTheDocument()
   })
 

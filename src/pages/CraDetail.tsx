@@ -61,6 +61,20 @@ function formatDays(value: number): string {
   return Number.isInteger(value) ? `${value} j` : `${value.toLocaleString('fr-FR')} j`
 }
 
+function dayBackground(dayType: DayType | undefined): string {
+  switch (dayType) {
+    case 'LEAVE':
+      return 'bg-yellow-100'
+    case 'PUBLIC_HOLIDAY':
+      return 'bg-orange-100'
+    case 'WORKED':
+    case undefined:
+      return 'bg-white'
+    default:
+      return 'bg-gray-50'
+  }
+}
+
 function ActivityChip({
   color,
   name,
@@ -472,9 +486,7 @@ export function CraDetail({
               return (
                 <div
                   key={date}
-                  className={`min-h-28 bg-white p-1.5 ${
-                    day?.dayType === 'WORKED' ? '' : 'bg-gray-50'
-                  }`}
+                  className={`min-h-28 p-1.5 ${dayBackground(day?.dayType)}`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500">{dayNum}</span>
