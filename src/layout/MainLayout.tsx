@@ -97,7 +97,6 @@ export function MainLayout() {
   const sections: NavSection[] = [
     {
       items: [
-        { to: '', label: 'Last Commit : ' + _LAST_COMMIT_, icon: '' },
         { to: '/', label: 'Tableau de bord', icon: ICONS.dashboard },
       ],
     },
@@ -168,6 +167,10 @@ export function MainLayout() {
           </span>
           SOC360
         </div>
+
+        <p className="px-5 pb-2 text-xs text-gray-500">
+          Last Commit : {_LAST_COMMIT_}
+        </p>
 
         <nav className="flex-1 space-y-0.5 px-3 pb-4">
           {sections.map((section, i) => (
