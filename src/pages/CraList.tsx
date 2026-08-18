@@ -65,16 +65,14 @@ export function CraList() {
 
   const editable = (c: CraDto) => c.status !== 'SUBMITTED' && c.status !== 'VALIDATED'
 
-  async function openPeriod(newYear: number, newMonth: number) {
+  function openPeriod(newYear: number, newMonth: number) {
+    const sameYear = newYear === year
     setYear(newYear)
     setMonth(newMonth)
-    if (isConsultant && user?.consultantId) {
-      try {
-        const cra = await crasApi.getOrCreate(user.consultantId, newYear, newMonth)
-        setOpenCraId(cra.id)
-      } catch (err) {
-        window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
-      }
+    setOpenCraId(null)
+    if (isConsultant && sameYear) {
+      const cra = (data ?? []).find((c) => c.month === newMonth)
+      if (cra) setOpenCraId(cra.id)
     }
   }
 
