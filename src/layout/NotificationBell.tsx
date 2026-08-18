@@ -12,6 +12,8 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0)
   const [items, setItems] = useState<import('../api/types').NotificationDto[]>([])
   const [loading, setLoading] = useState(false)
+  const [pollEnabled, setPollEnabled] = useState(false)
+  const [intervalSec, setIntervalSec] = useState('30')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -25,12 +27,18 @@ export function NotificationBell() {
         .catch(() => {})
     }
     load()
-    const timer = setInterval(load, 30000)
+    if (!pollEnabled) {
+      return () => {
+        cancelled = true
+      }
+    }
+    const secs = Math.max(1, Number(intervalSec) || 30)
+    const timer = setInterval(load, secs * 1000)
     return () => {
       cancelled = true
       clearInterval(timer)
     }
-  }, [user?.id])
+  }, [user?.id, pollEnabled, intervalSec])
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -80,20 +88,38 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={toggle}
-        className="relative rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-        title="Notifications"
-      >
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z" />
-        </svg>
-        {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </button>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={pollEnabled}
+          onChange={(e) => setPollEnabled(e.target.checked)}
+          className="h-4 w-4 accent-brand-600"
+          title="Activer le rafraîchissement automatique des notifications"
+        />
+        <input
+          type="text"
+          inputMode="numeric"
+          value={intervalSec}
+          onChange={(e) => setIntervalSec(e.target.value.replace(/[^0-9]/g, ''))}
+          disabled={!pollEnabled}
+          className="w-12 rounded-md border border-gray-300 px-1.5 py-1 text-center text-xs disabled:opacity-40"
+          title="Intervalle de rafraîchissement (secondes)"
+        />
+        <button
+          onClick={toggle}
+          className="relative rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+          title="Notifications"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z" />
+          </svg>
+          {unread > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+        </button>
+      </div>
 
       {open && (
         <div className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
