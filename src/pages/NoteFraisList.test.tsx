@@ -321,6 +321,42 @@ describe('NoteFraisList', () => {
     ).toHaveValue('Restaurant McDo 25,50 € le 12/03/2026')
   })
 
+  it('ajoute une nouvelle ligne pour chaque facture OCR dans la même période', async () => {
+    userMock.value = managerUser
+    findBySocYearMock.mockResolvedValue([])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    ocrImageTextMock
+      .mockResolvedValueOnce('ALLO PIZZA DI NAPOLI\n26 RUE DE BOISSY\n91480 QUINCY SOUS SENART\n16/01/2025 20:44\nNET A PAYER TTC EURO 25.00')
+      .mockResolvedValueOnce('RESTAURATION DE PASSION\n2 Bis AVENUE DE QUINCY\n77380 COMBS LA VILLE\nMardi 14 Janvier 2025\n2 repas 34,00 €\nPAYÉ 34,00 «')
+
+    renderList()
+    fireEvent.click(screen.getByRole('button', { name: '+ Nouvelle note de frais' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const fileInput = within(dialog).getByLabelText(/Joindre une facture/)
+    fireEvent.change(fileInput, {
+      target: { files: [new File(['fake'], 'facture1.png', { type: 'image/png' })] },
+    })
+    fireEvent.change(fileInput, {
+      target: { files: [new File(['fake'], 'facture2.png', { type: 'image/png' })] },
+    })
+
+    await waitFor(() =>
+      expect(within(dialog).getAllByPlaceholderText('Montant TTC €')).toHaveLength(2),
+    )
+    const amounts = within(dialog).getAllByPlaceholderText('Montant TTC €')
+    expect(amounts[0]).toHaveValue(25)
+    expect(amounts[1]).toHaveValue(34)
+    expect(within(dialog).getAllByPlaceholderText('Nom enseigne')[0]).toHaveValue(
+      'ALLO PIZZA DI NAPOLI',
+    )
+    expect(within(dialog).getAllByPlaceholderText('Nom enseigne')[1]).toHaveValue(
+      'RESTAURATION DE PASSION',
+    )
+  })
+
   it('affiche une erreur quand l’OCR ne trouve pas de texte dans l’image', async () => {
     userMock.value = managerUser
     findBySocYearMock.mockResolvedValue([])

@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { noteFraisApi } from '../api/noteFrais'
 import { consultantsApi } from '../api/consultants'
 import { isImageFile, ocrImageText } from '../lib/ocr'
+import { parseReceipt } from '../lib/receipt'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
@@ -57,56 +58,33 @@ function lineAmount(line: LineForm): number {
   return ttc > 0 ? ttc : ht
 }
 
-function largestAmount(text: string): number | null {
-  const matches = text.match(/\d+(?:[.,]\d{1,2})?\s*€/g) ?? []
-  let best: number | null = null
-  for (const m of matches) {
-    const n = parseFloat(m.replace(/€/g, '').replace(',', '.').trim())
-    if (!Number.isNaN(n) && (best === null || n > best)) best = n
-  }
-  return best
-}
-
-function firstDate(text: string): string | null {
-  const m = text.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/)
-  if (!m) return null
-  const [, d, mo, y] = m
-  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`
-}
-
-function inferCategory(text: string): string | null {
-  const t = text.toLowerCase()
-  const rules: [RegExp, string][] = [
-    [/restaurant|déjeuner|dejeuner|dîner|diner|repas|pizza|kebab/, 'Restaurant'],
-    [/train|sncf|avion|taxi|uber|métro|metro|bus|tram|navette/, 'Transport'],
-    [/hôtel|hotel|nuitée|nuit|chambre|airbnb|booking/, 'Hébergement'],
-    [/essence|carburant|gasoil|diesel|sans plomb|sp95|sp98/, 'Essence'],
-    [/péage|peage|autoroute|vinci|sanef/, 'Péage'],
-    [/parking|stationnement/, 'Stationnement'],
-    [/téléphone|telephone|mobile|forfait/, 'Téléphone'],
-    [/matériel|materiel|ordinateur|écran|clavier|souris/, 'Matériel'],
-  ]
-  for (const [re, cat] of rules) {
-    if (re.test(t)) return cat
-  }
-  return null
+function isBlankLine(line: LineForm): boolean {
+  return (
+    !line.enseigne.trim() &&
+    !line.adresse.trim() &&
+    !line.montantHT.trim() &&
+    !line.montantTTC.trim() &&
+    !line.label.trim()
+  )
 }
 
 function fillLineFromText(lines: LineForm[], text: string, filename: string): LineForm[] {
+  const parsed = parseReceipt(text, filename)
+  const apply = (base: LineForm): LineForm => ({
+    ...base,
+    date: parsed.date ?? base.date,
+    montantHT: parsed.montantHT != null ? String(parsed.montantHT) : base.montantHT,
+    montantTTC: parsed.montantTTC != null ? String(parsed.montantTTC) : base.montantTTC,
+    category: parsed.category ?? base.category,
+    label: base.label.trim() ? base.label : parsed.label,
+    enseigne: parsed.enseigne ?? base.enseigne,
+    adresse: parsed.adresse ?? base.adresse,
+  })
   const first = lines[0] ?? newLine()
-  const rest = lines.slice(1)
-  const amount = largestAmount(text)
-  const date = firstDate(text)
-  const category = inferCategory(text)
-  const label = filename.replace(/\.[^.]+$/, '') || 'Dépense'
-  const updated: LineForm = {
-    ...first,
-    date: date ?? first.date,
-    montantTTC: amount !== null ? String(amount) : first.montantTTC,
-    category: category ?? first.category,
-    label: first.label.trim() ? first.label : label,
+  if (isBlankLine(first)) {
+    return [apply(first), ...lines.slice(1)]
   }
-  return [updated, ...rest]
+  return [...lines, apply(newLine())]
 }
 
 export function NoteFraisList() {
@@ -571,6 +549,17 @@ export function NoteFraisList() {
               {form.lines.map((line, i) => (
                 <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 sm:grid-cols-12 sm:items-center">
                   <Input
+                    placeholder="Nom enseigne"
+                    className="sm:col-span-2"
+                    value={line.enseigne}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lines: form.lines.map((l, j) => (j === i ? { ...l, enseigne: e.target.value } : l)),
+                      })
+                    }
+                  />
+                  <Input
                     type="date"
                     className="sm:col-span-2"
                     value={line.date}
@@ -609,19 +598,8 @@ export function NoteFraisList() {
                     }
                   />
                   <Input
-                    placeholder="Nom enseigne"
-                    className="sm:col-span-2"
-                    value={line.enseigne}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        lines: form.lines.map((l, j) => (j === i ? { ...l, enseigne: e.target.value } : l)),
-                      })
-                    }
-                  />
-                  <Input
                     placeholder="Adresse"
-                    className="sm:col-span-2"
+                    className="sm:col-span-4"
                     value={line.adresse}
                     onChange={(e) =>
                       setForm({
@@ -635,7 +613,7 @@ export function NoteFraisList() {
                     step="0.01"
                     min="0"
                     placeholder="Montant HT €"
-                    className="sm:col-span-1"
+                    className="sm:col-span-2"
                     value={line.montantHT}
                     onChange={(e) =>
                       setForm({
@@ -649,7 +627,7 @@ export function NoteFraisList() {
                     step="0.01"
                     min="0"
                     placeholder="Montant TTC €"
-                    className="sm:col-span-1"
+                    className="sm:col-span-2"
                     value={line.montantTTC}
                     onChange={(e) =>
                       setForm({
