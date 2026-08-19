@@ -4,7 +4,7 @@ import { crasApi } from '../api/cras'
 import type { CraDto } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { Badge, ErrorBlock, LoadingBlock, PageHeader } from '../components/data'
-import { Button, Card, InlineButton, Input, Select, Spinner } from '../components/ui'
+import { Button, Card, InlineButton, Input, Select } from '../components/ui'
 import {
   CRA_STATUS_LABELS,
   formatDate,
@@ -25,7 +25,6 @@ export function CraList() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
-  const [exporting, setExporting] = useState<null | 'csv' | 'pdf'>(null)
   const [page, setPage] = useState(0)
   const [openCraId, setOpenCraId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
@@ -169,23 +168,6 @@ export function CraList() {
     }
   }
 
-  async function handleExport(kind: 'csv' | 'pdf') {
-    const socId = user?.socId
-    if (!socId) return
-    setExporting(kind)
-    try {
-      if (kind === 'csv') {
-        await crasApi.exportCsv({ socId, month, year })
-      } else {
-        await crasApi.exportPdf({ socId, month, year })
-      }
-    } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    } finally {
-      setExporting(null)
-    }
-  }
-
   return (
     <div>
       <PageHeader
@@ -199,16 +181,6 @@ export function CraList() {
               </svg>
               Actualiser
             </InlineButton>
-            {!isConsultant && user.socId ? (
-              <>
-                <InlineButton onClick={() => handleExport('csv')} disabled={exporting !== null}>
-                  {exporting === 'csv' ? <Spinner /> : 'Exporter CSV'}
-                </InlineButton>
-                <InlineButton onClick={() => handleExport('pdf')} disabled={exporting !== null}>
-                  {exporting === 'pdf' ? <Spinner /> : 'Exporter PDF'}
-                </InlineButton>
-              </>
-            ) : null}
           </>
         }
       />

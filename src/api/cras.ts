@@ -24,4 +24,6 @@ export const crasApi = {
     api.download(`/cras/export/csv?month=${params.month}&year=${params.year}${params.socId ? `&socId=${params.socId}` : ''}`, `cra-${params.month}-${params.year}.csv`),
   exportPdf: (params: { socId?: number; month: number; year: number }) =>
     api.download(`/cras/export/pdf?month=${params.month}&year=${params.year}${params.socId ? `&socId=${params.socId}` : ''}`, `cra-${params.month}-${params.year}.pdf`),
+  exportClientPdf: (id: number) =>
+    api.download(`/cras/${id}/export/client`, `cra-client.pdf`),
 }
