@@ -116,7 +116,7 @@ export function MainLayout() {
   if (!user) return null
 
   const isAdmin = user.role === 'ADMIN'
-  const _LAST_COMMIT_ = '18/08/2026 19:51'
+  const _LAST_COMMIT_ = '2026_08_19_00_32_03'
 
   const sections: NavSection[] = [
     {
@@ -193,9 +193,9 @@ export function MainLayout() {
           SOC360
         </div>
 
-        <p id="_horloge_numerique" className="px-5 pb-3">
+        <div id="_horloge_numerique" className="px-5 pb-3">
           <HorlogeNumerique />
-        </p>
+        </div>
 
         <p className="px-5 pb-2 text-gray-500 font_last_commit">
           Last Commit : <br></br>{_LAST_COMMIT_}
