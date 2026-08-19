@@ -409,6 +409,7 @@ export interface NoteFraisDto {
   validatedAt: string | null
   paidAt: string | null
   comment: string | null
+  infosFacture?: string | null
   lines: NoteFraisLineDto[]
 }
 
@@ -426,6 +427,7 @@ export interface CreateNoteFraisRequest {
   month: number
   year: number
   lines: NoteFraisLineRequest[]
+  infosFacture?: string | null
 }
 
 export interface HrDocumentDto {

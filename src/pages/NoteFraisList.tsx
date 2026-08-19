@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { noteFraisApi } from '../api/noteFrais'
 import { consultantsApi } from '../api/consultants'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
-import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner } from '../components/ui'
+import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
 import { Badge, ErrorBlock, LoadingBlock, Modal, PageHeader, Table } from '../components/data'
 import {
   MONTHS_FR,
@@ -30,6 +30,7 @@ interface FormState {
   month: number
   year: number
   lines: LineForm[]
+  infosFacture: string
 }
 
 function newLine(): LineForm {
@@ -81,11 +82,14 @@ export function NoteFraisList() {
     month: now.getMonth() + 1,
     year,
     lines: [newLine()],
+    infosFacture: '',
   })
   const [editing, setEditing] = useState<NoteFraisDto | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null)
+  const [attachmentName, setAttachmentName] = useState<string | null>(null)
 
   if (!user) return null
 
@@ -95,9 +99,12 @@ export function NoteFraisList() {
       month: now.getMonth() + 1,
       year,
       lines: [newLine()],
+      infosFacture: '',
     })
     setEditing(null)
     setFormError(null)
+    setAttachmentUrl(null)
+    setAttachmentName(null)
     setModalOpen(true)
   }
 
@@ -117,10 +124,21 @@ export function NoteFraisList() {
               comment: l.comment ?? '',
             }))
           : [newLine()],
+      infosFacture: nf.infosFacture ?? '',
     })
     setEditing(nf)
     setFormError(null)
+    setAttachmentUrl(null)
+    setAttachmentName(null)
     setModalOpen(true)
+  }
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (attachmentUrl) URL.revokeObjectURL(attachmentUrl)
+    setAttachmentUrl(URL.createObjectURL(file))
+    setAttachmentName(file.name)
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -142,6 +160,7 @@ export function NoteFraisList() {
             reimbursed: l.reimbursed,
             comment: l.comment || null,
           })),
+        infosFacture: form.infosFacture || null,
       }
       if (request.lines.length === 0) {
         setFormError('Ajoutez au moins une ligne')
@@ -377,7 +396,7 @@ export function NoteFraisList() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? `Modifier la note de ${editing.consultantName}` : 'Nouvelle note de frais'}
-        size="lg"
+        size="xl"
         footer={
           <>
             <InlineButton onClick={() => setModalOpen(false)}>Annuler</InlineButton>
@@ -445,9 +464,10 @@ export function NoteFraisList() {
             </div>
             <div className="space-y-3">
               {form.lines.map((line, i) => (
-                <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 sm:grid-cols-6">
+                <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 sm:grid-cols-12 sm:items-center">
                   <Input
                     type="date"
+                    className="sm:col-span-3"
                     value={line.date}
                     onChange={(e) =>
                       setForm({
@@ -457,7 +477,7 @@ export function NoteFraisList() {
                     }
                   />
                   <Select
-                    className="sm:col-span-1"
+                    className="sm:col-span-2"
                     value={line.category}
                     onChange={(e) =>
                       setForm({
@@ -473,7 +493,8 @@ export function NoteFraisList() {
                     ))}
                   </Select>
                   <Input
-                    placeholder="Libellé"
+                    placeholder="Libellé / action"
+                    className="sm:col-span-3"
                     value={line.label}
                     onChange={(e) =>
                       setForm({
@@ -487,6 +508,7 @@ export function NoteFraisList() {
                     step="0.01"
                     min="0"
                     placeholder="Montant €"
+                    className="sm:col-span-2"
                     value={line.amount}
                     onChange={(e) =>
                       setForm({
@@ -495,7 +517,7 @@ export function NoteFraisList() {
                       })
                     }
                   />
-                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 sm:col-span-1">
                     <input
                       type="checkbox"
                       checked={line.reimbursed}
@@ -516,7 +538,7 @@ export function NoteFraisList() {
                     onClick={() =>
                       setForm({ ...form, lines: form.lines.filter((_, j) => j !== i) })
                     }
-                    className="text-sm text-red-600 hover:text-red-800"
+                    className="text-sm text-red-600 hover:text-red-800 sm:col-span-1"
                   >
                     Supprimer
                   </button>
@@ -531,6 +553,54 @@ export function NoteFraisList() {
               + Ajouter une ligne
             </button>
           </div>
+
+          <div className="rounded-lg border border-dashed border-gray-300 p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                Joindre une facture (image / PDF)
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleFile}
+                />
+              </label>
+              {attachmentName && (
+                <span className="text-sm text-gray-600">
+                  {attachmentName}{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (attachmentUrl) URL.revokeObjectURL(attachmentUrl)
+                      setAttachmentUrl(null)
+                      setAttachmentName(null)
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    Retirer
+                  </button>
+                </span>
+              )}
+            </div>
+            {attachmentUrl && (
+              <div className="mt-3 overflow-hidden rounded-lg border border-gray-200">
+                {attachmentName && /\.(png|jpe?g|gif|webp|bmp)$/i.test(attachmentName) ? (
+                  <img src={attachmentUrl} alt="Aperçu de la facture" className="max-h-72 w-full object-contain" />
+                ) : (
+                  <iframe src={attachmentUrl} title="Aperçu du document" className="h-72 w-full" />
+                )}
+              </div>
+            )}
+          </div>
+
+          <Field label="Infos facture (texte de la facture)">
+            <Textarea
+              rows={4}
+              placeholder="Collez ou saisissez ici le contenu de la facture / du ticket…"
+              value={form.infosFacture}
+              onChange={(e) => setForm({ ...form, infosFacture: e.target.value })}
+            />
+          </Field>
         </form>
       </Modal>
     </div>

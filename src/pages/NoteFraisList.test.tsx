@@ -241,7 +241,7 @@ describe('NoteFraisList', () => {
     const dialog = await screen.findByRole('dialog')
     const selects = within(dialog).getAllByRole('combobox')
     fireEvent.change(selects[0], { target: { value: '10' } })
-    fireEvent.change(within(dialog).getByPlaceholderText('Libellé'), {
+    fireEvent.change(within(dialog).getByPlaceholderText('Libellé / action'), {
       target: { value: 'Train' },
     })
     fireEvent.change(within(dialog).getByPlaceholderText('Montant €'), {
@@ -264,6 +264,7 @@ describe('NoteFraisList', () => {
             comment: null,
           },
         ],
+        infosFacture: null,
       }),
     )
   })
