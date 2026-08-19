@@ -434,6 +434,15 @@ export function CraDetail({
     }
   }
 
+  async function handleExportCompanyPdf() {
+    if (!cra) return
+    try {
+      await crasApi.exportCompanyPdf(cra.id)
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
   function handleFillAllDays(activityId: string) {
     if (!activityId) {
       setFormError('Aucune activité correspondant à ce mois pour remplir le CRA.')
@@ -527,6 +536,7 @@ export function CraDetail({
           )}
           <InlineButton onClick={openHistory}>Historique</InlineButton>
           <InlineButton onClick={handleExportClientPdf}>Export Pdf Client</InlineButton>
+          <InlineButton onClick={handleExportCompanyPdf}>Export Pdf Ma Societe</InlineButton>
         </div>
       </div>
 
