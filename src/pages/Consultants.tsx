@@ -16,7 +16,7 @@ import {
 } from '../components/data'
 import { formatDate, formatMoney } from '../lib/format'
 import { useAsync } from '../lib/useAsync'
-import type { ConsultantDto, ManagerSummary } from '../api/types'
+import type { ConsultantDto, ManagerSummary, HistoConsultantDto } from '../api/types'
 import { useCallback, useEffect } from 'react'
 import { useSoc } from '../soc/SocContext'
 
@@ -37,6 +37,13 @@ interface FormState {
   managerId: string
   username: string
   password: string
+}
+
+interface PersonForm {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
 }
 
 const emptyForm: FormState = {
@@ -69,9 +76,10 @@ export function Consultants() {
   const { selectedSocId: workingSocContextId } = useSoc()
   const isAdmin = user?.role === 'ADMIN'
   const isManager = user?.role === 'MANAGER'
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const isResponsible = user?.role === 'RESPONSIBLE_SOC'
+  const canEdit = isAdmin || isResponsible
   const canCreate = canEdit || isManager
-  const canCreateManager = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const canCreateManager = isAdmin || isResponsible
   const workingSocId = isAdmin ? undefined : (workingSocContextId ?? user?.socId ?? undefined)
 
   const [search, setSearch] = useState('')
@@ -107,6 +115,17 @@ export function Consultants() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  const [personEditing, setPersonEditing] = useState<ConsultantDto | null>(null)
+  const [personForm, setPersonForm] = useState<PersonForm>({ firstName: '', lastName: '', email: '', phone: '' })
+  const [personModalOpen, setPersonModalOpen] = useState(false)
+  const [personSubmitting, setPersonSubmitting] = useState(false)
+  const [personError, setPersonError] = useState<string | null>(null)
+
+  const [historyFor, setHistoryFor] = useState<ConsultantDto | null>(null)
+  const [historyItems, setHistoryItems] = useState<HistoConsultantDto[]>([])
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+
   const selectedSocId = form.socId ? Number(form.socId) : null
   const { data: managers } = useAsync(
     () =>
@@ -136,6 +155,10 @@ export function Consultants() {
   }
 
   function openEdit(c: ConsultantDto) {
+    if (c.person) {
+      openEditPerson(c)
+      return
+    }
     if (c.role !== 'CONSULTANT') return
     setForm({
       role: 'CONSULTANT',
@@ -158,6 +181,43 @@ export function Consultants() {
     setEditing(c)
     setFormError(null)
     setModalOpen(true)
+  }
+
+  function openEditPerson(c: ConsultantDto) {
+    setPersonEditing(c)
+    setPersonForm({
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email ?? '',
+      phone: c.phone ?? '',
+    })
+    setPersonError(null)
+    setPersonModalOpen(true)
+  }
+
+  async function handlePersonSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!personForm.firstName.trim() || !personForm.lastName.trim()) {
+      setPersonError('Le prénom et le nom sont obligatoires')
+      return
+    }
+    if (!personEditing) return
+    setPersonSubmitting(true)
+    setPersonError(null)
+    try {
+      await consultantsApi.updatePerson(personEditing.id, {
+        firstName: personForm.firstName.trim(),
+        lastName: personForm.lastName.trim(),
+        email: personForm.email.trim() || null,
+        phone: personForm.phone.trim() || null,
+      })
+      setPersonModalOpen(false)
+      reload()
+    } catch (err) {
+      setPersonError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setPersonSubmitting(false)
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -216,12 +276,41 @@ export function Consultants() {
   }
 
   async function handleDelete(c: ConsultantDto) {
+    if (c.person) {
+      handleDeletePerson(c)
+      return
+    }
     if (!window.confirm(`Supprimer le consultant ${c.firstName} ${c.lastName} ?\nLes CRA, notes de frais et documents associés seront supprimés.`)) return
     try {
       await consultantsApi.delete(c.id)
       setData({ ...data!, items: data?.items.filter((x) => x.id !== c.id) ?? [] })
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function handleDeletePerson(c: ConsultantDto) {
+    if (!window.confirm(`Supprimer ${c.firstName} ${c.lastName} (${ROLE_LABELS[c.role] ?? c.role}) ?`)) return
+    try {
+      await consultantsApi.deletePerson(c.id)
+      setData({ ...data!, items: data?.items.filter((x) => x.id !== c.id) ?? [] })
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function openHistory(c: ConsultantDto) {
+    setHistoryFor(c)
+    setHistoryItems([])
+    setHistoryOpen(true)
+    setHistoryLoading(true)
+    try {
+      const items = await consultantsApi.history(c.id)
+      setHistoryItems(items)
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setHistoryLoading(false)
     }
   }
 
@@ -284,7 +373,7 @@ export function Consultants() {
         <>
           <Table
             rowKey={(c) => `${c.role}-${c.id}`}
-            onRowClick={canEdit ? (c) => { if (c.role === 'CONSULTANT') openEdit(c) } : undefined}
+            onRowClick={canEdit || isManager ? (c) => { if (!c.person) openEdit(c) } : undefined}
             rows={data.items}
             columns={[
               {
@@ -358,22 +447,36 @@ export function Consultants() {
               {
                 key: 'actions',
                 label: '',
-                render: (c) =>
-                  canEdit && c.role === 'CONSULTANT' ? (
+                render: (c) => {
+                  const isSelf = c.person && user != null && c.id === user.id
+                  const canEditPerson = canEdit
+                  const canEditConsultant = canEdit || isManager
+                  const canEditRow = c.person ? canEditPerson : canEditConsultant
+                  if (!canEditRow) return <></>
+                  return (
                     <div className="flex justify-end gap-1">
                       <InlineButton onClick={(e) => { e.stopPropagation(); openEdit(c) }}>
                         Modifier
                       </InlineButton>
-                      <InlineButton
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
-                      >
-                        Supprimer
-                      </InlineButton>
+                      {!c.person && (
+                        <InlineButton
+                          className="text-brand-600 hover:bg-brand-50"
+                          onClick={(e) => { e.stopPropagation(); openHistory(c) }}
+                        >
+                          Historique
+                        </InlineButton>
+                      )}
+                      {!isSelf && (
+                        <InlineButton
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                        >
+                          Supprimer
+                        </InlineButton>
+                      )}
                     </div>
-                  ) : (
-                    <></>
-                  ),
+                  )
+                },
               },
             ]}
           />
@@ -596,6 +699,74 @@ export function Consultants() {
           )}
           {loadingOk() && null}
         </form>
+      </Modal>
+
+      <Modal
+        open={personModalOpen}
+        onClose={() => setPersonModalOpen(false)}
+        title={personEditing ? `Modifier ${personEditing.firstName} ${personEditing.lastName}` : 'Modifier la personne'}
+        footer={
+          <>
+            <InlineButton onClick={() => setPersonModalOpen(false)}>Annuler</InlineButton>
+            <Button className="w-auto" onClick={handlePersonSubmit as never} disabled={personSubmitting}>
+              {personSubmitting ? <Spinner className="border-white border-t-transparent" /> : null}
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handlePersonSubmit} className="space-y-4">
+          {personError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {personError}
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Prénom *">
+              <Input value={personForm.firstName} onChange={(e) => setPersonForm({ ...personForm, firstName: e.target.value })} required />
+            </Field>
+            <Field label="Nom *">
+              <Input value={personForm.lastName} onChange={(e) => setPersonForm({ ...personForm, lastName: e.target.value })} required />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Email">
+              <Input type="email" value={personForm.email} onChange={(e) => setPersonForm({ ...personForm, email: e.target.value })} />
+            </Field>
+            <Field label="Téléphone">
+              <Input value={personForm.phone} onChange={(e) => setPersonForm({ ...personForm, phone: e.target.value })} />
+            </Field>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title={historyFor ? `Historique de ${historyFor.firstName} ${historyFor.lastName}` : 'Historique'}
+        footer={<InlineButton onClick={() => setHistoryOpen(false)}>Fermer</InlineButton>}
+      >
+        {historyLoading && <LoadingBlock />}
+        {!historyLoading && historyItems.length === 0 && (
+          <p className="text-sm text-gray-500">Aucune modification enregistrée.</p>
+        )}
+        {historyItems.length > 0 && (
+          <ul className="space-y-3">
+            {historyItems.map((h) => (
+              <li key={h.id} className="rounded-lg border border-gray-200 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-900">
+                    {h.action === 'CREATE' ? 'Création' : h.action === 'UPDATE' ? 'Modification' : 'Suppression'}
+                  </span>
+                  <span className="text-xs text-gray-500">{h.dateMaj ? new Date(h.dateMaj).toLocaleString('fr-FR') : ''}</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-600">
+                  Par : {h.userName ?? '—'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Modal>
     </div>
   )

@@ -1,6 +1,6 @@
 import { api } from './client'
 import type { PageResponse } from './types'
-import type { ConsultantDto, ConsultantRequest, ConsultantSummary, ManagerSummary } from './types'
+import type { ConsultantDto, ConsultantRequest, ConsultantSummary, ManagerSummary, HistoConsultantDto } from './types'
 
 export const consultantsApi = {
   findAll: (params: {
@@ -16,6 +16,10 @@ export const consultantsApi = {
   update: (id: number, request: ConsultantRequest) =>
     api.put<ConsultantDto>(`/consultants/${id}`, request),
   delete: (id: number) => api.delete<void>(`/consultants/${id}`),
+  history: (id: number) => api.get<HistoConsultantDto[]>(`/consultants/${id}/history`),
+  updatePerson: (userId: number, request: { firstName: string; lastName: string; email: string | null; phone: string | null }) =>
+    api.put<ConsultantDto>(`/consultants/persons/${userId}`, request),
+  deletePerson: (userId: number) => api.delete<void>(`/consultants/persons/${userId}`),
   importCsv: (file: File, socId: number) => {
     const formData = new FormData()
     formData.append('file', file)

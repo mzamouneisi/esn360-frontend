@@ -166,6 +166,7 @@ export interface ConsultantDto {
   hasUserAccount: boolean
   username: string | null
   role: string
+  person: boolean
 }
 
 export interface ConsultantRequest {
@@ -200,6 +201,18 @@ export interface ManagerSummary {
   position: string
 }
 
+export interface HistoConsultantDto {
+  id: number
+  consultantId: number | null
+  consultantName: string
+  userId: number | null
+  userName: string
+  dateMaj: string | null
+  action: string
+  infosAvant: string | null
+  infosApres: string | null
+  diff: string | null
+}
 export interface ClientDto {
   id: number
   name: string
