@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { usersApi, type UpdateUserRequest } from '../api/users'
+import { usersApi, type UpdateUserRequest, type CreateUserRequest } from '../api/users'
 import { socsApi } from '../api/socs'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -31,6 +31,17 @@ interface EditForm {
   active: boolean
 }
 
+interface CreateForm {
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+  phone: string
+  role: Role
+  socId: string
+  password: string
+}
+
 export function Users() {
   const { user } = useAuth()
   const [search, setSearch] = useState('')
@@ -58,6 +69,18 @@ export function Users() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<UserDto | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createForm, setCreateForm] = useState<CreateForm>({
+    username: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    role: 'CONSULTANT',
+    socId: '',
+    password: '',
+  })
+  const [createLoading, setCreateLoading] = useState(false)
 
   function openEdit(user: UserDto) {
     setActionError(null)
@@ -121,6 +144,50 @@ export function Users() {
     setDeleting(user)
   }
 
+  function openCreate() {
+    setActionError(null)
+    setCreateForm({
+      username: '',
+      email: '',
+      firstName: '',
+      lastName: '',
+      phone: '',
+      role: 'CONSULTANT',
+      socId: '',
+      password: '',
+    })
+    setCreating(true)
+  }
+
+  async function doCreate() {
+    const f = createForm
+    if (!f.username.trim() || !f.email.trim() || !f.firstName.trim() || !f.lastName.trim() || !f.password.trim()) {
+      setActionError('Nom d’utilisateur, email, nom, prénom et mot de passe sont obligatoires')
+      return
+    }
+    setCreateLoading(true)
+    setActionError(null)
+    const request: CreateUserRequest = {
+      username: f.username.trim(),
+      email: f.email.trim(),
+      firstName: f.firstName.trim(),
+      lastName: f.lastName.trim(),
+      phone: f.phone.trim() || null,
+      role: f.role,
+      socId: f.socId ? Number(f.socId) : null,
+      password: f.password,
+    }
+    try {
+      await usersApi.create(request)
+      setCreating(false)
+      reload()
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Impossible de créer l'utilisateur")
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
   async function doDelete(user: UserDto) {
     setDeleteLoading(true)
     setActionError(null)
@@ -142,7 +209,14 @@ export function Users() {
       <PageHeader
         title="Utilisateurs"
         subtitle="Comptes de la plateforme (administration)"
-        actions={<RefreshButton onClick={reload} />}
+        actions={
+          <>
+            <RefreshButton onClick={reload} />
+            <Button className="w-auto" onClick={openCreate}>
+              + Ajouter un utilisateur
+            </Button>
+          </>
+        }
       />
 
       <div className="mb-4">
@@ -210,19 +284,27 @@ export function Users() {
               {
                 key: 'actions',
                 label: '',
-                render: (u) => (
-                  <div className="flex justify-end gap-1">
-                    <InlineButton onClick={() => openEdit(u)}>Modifier</InlineButton>
-                    <InlineButton
-                      className="text-red-600 hover:bg-red-50 disabled:opacity-40"
-                      disabled={u.active}
-                      title={u.active ? 'Désactivez le compte avant de le supprimer' : undefined}
-                      onClick={() => openDelete(u)}
-                    >
-                      Supprimer
-                    </InlineButton>
-                  </div>
-                ),
+                render: (u) => {
+                  const isSelf = user != null && u.id === user.id
+                  const isPrimaryAdmin = u.username === 'admin'
+                  const canModify = !(isPrimaryAdmin && !isSelf)
+                  const canDelete = !isSelf && !isPrimaryAdmin
+                  return (
+                    <div className="flex justify-end gap-1">
+                      {canModify && <InlineButton onClick={() => openEdit(u)}>Modifier</InlineButton>}
+                      {canDelete && (
+                        <InlineButton
+                          className="text-red-600 hover:bg-red-50 disabled:opacity-40"
+                          disabled={u.active}
+                          title={u.active ? 'Désactivez le compte avant de le supprimer' : undefined}
+                          onClick={() => openDelete(u)}
+                        >
+                          Supprimer
+                        </InlineButton>
+                      )}
+                    </div>
+                  )
+                },
               },
             ]}
           />
@@ -273,7 +355,11 @@ export function Users() {
                 <Input value={editing.form.phone} onChange={(e) => updateForm({ phone: e.target.value })} />
               </Field>
               <Field label="Rôle">
-                <Select value={editing.form.role} onChange={(e) => updateForm({ role: e.target.value as Role })}>
+                <Select
+                  value={editing.form.role}
+                  disabled={editing.user.username === 'admin' && editing.user.id === user?.id}
+                  onChange={(e) => updateForm({ role: e.target.value as Role })}
+                >
                   {ROLE_OPTIONS.map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -301,6 +387,72 @@ export function Users() {
               />
               Compte actif
             </label>
+          </div>
+        </Modal>
+      )}
+
+      {creating && (
+        <Modal
+          open
+          onClose={() => setCreating(false)}
+          title="Ajouter un utilisateur"
+          footer={
+            <>
+              <Button
+                type="button"
+                className="!w-auto !bg-gray-100 !text-gray-700 hover:!bg-gray-200"
+                onClick={() => setCreating(false)}
+                disabled={createLoading}
+              >
+                Annuler
+              </Button>
+              <Button type="button" className="!w-auto" disabled={createLoading} onClick={() => void doCreate()}>
+                {createLoading ? <Spinner className="border-white border-t-transparent" /> : null}
+                Créer
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Nom d’utilisateur *">
+                <Input value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} />
+              </Field>
+              <Field label="E-mail *">
+                <Input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+              </Field>
+              <Field label="Prénom *">
+                <Input value={createForm.firstName} onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })} />
+              </Field>
+              <Field label="Nom *">
+                <Input value={createForm.lastName} onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })} />
+              </Field>
+              <Field label="Téléphone">
+                <Input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
+              </Field>
+              <Field label="Rôle">
+                <Select value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as Role })}>
+                  {ROLE_OPTIONS.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Société">
+                <Select value={createForm.socId} onChange={(e) => setCreateForm({ ...createForm, socId: e.target.value })}>
+                  <option value="">Aucune</option>
+                  {(socs ?? []).map((soc: SocDto) => (
+                    <option key={soc.id} value={soc.id}>
+                      {soc.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Mot de passe *">
+                <Input type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
+              </Field>
+            </div>
           </div>
         </Modal>
       )}
