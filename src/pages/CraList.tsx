@@ -250,7 +250,13 @@ export function CraList() {
                   {pageItems.map((cra) => (
                     <tr
                       key={cra.id}
-                      className={`align-top ${cra.type === 'CONGE' ? 'bg-yellow-100' : 'even:bg-gray-50'}`}
+                      className={`align-top ${
+                        cra.id === openCraId
+                          ? '[&>td]:border-y-2 [&>td]:border-blue-400 [&>td:first-child]:border-l-2 [&>td:last-child]:border-r-2 [&>td]:bg-blue-50'
+                          : cra.type === 'CONGE'
+                            ? 'bg-yellow-100'
+                            : 'even:bg-gray-50'
+                      }`}
                     >
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
                         {cra.year}-{String(cra.month).padStart(2, '0')}
