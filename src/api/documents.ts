@@ -11,9 +11,16 @@ export interface DocumentUploadRequest {
   sharedWith?: number[]
 }
 
+export interface ShareTarget {
+  id: number
+  fullName: string
+  role: string
+}
+
 export const documentsApi = {
   findAll: (params?: { consultantId?: number; socId?: number }) =>
     api.get<HrDocumentDto[]>('/documents', params),
+  shareTargets: () => api.get<ShareTarget[]>('/documents/share-targets'),
   upload: (file: File, request: DocumentUploadRequest) => {
     const formData = new FormData()
     formData.append('file', file)

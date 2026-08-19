@@ -12,7 +12,7 @@ import type { HrDocumentDto } from '../api/types'
 export function Documents() {
   const { user } = useAuth()
   const isConsultant = user?.role === 'CONSULTANT'
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const canDelete = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
 
   const { data, loading, error, reload, setData } = useAsync(
     () =>
@@ -27,9 +27,9 @@ export function Documents() {
     [user?.socId],
   )
 
-  const { data: managers } = useAsync(
-    () => (user?.socId ? consultantsApi.managers(user.socId) : Promise.resolve([])),
-    [user?.socId],
+  const { data: shareTargets } = useAsync(
+    () => documentsApi.shareTargets(),
+    [user?.id],
   )
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -124,11 +124,9 @@ export function Documents() {
         actions={
           <>
             <RefreshButton onClick={reload} />
-            {canEdit ? (
-              <Button className="w-auto" onClick={openUpload}>
-                + Partager un document
-              </Button>
-            ) : null}
+            <Button className="w-auto" onClick={openUpload}>
+              + Partager un document
+            </Button>
           </>
         }
       />
@@ -203,7 +201,7 @@ export function Documents() {
                 render: (d) => (
                   <div className="flex justify-end gap-1">
                     <InlineButton onClick={() => handleDownload(d)}>Télécharger</InlineButton>
-                    {canEdit && (
+                    {canDelete && (
                       <InlineButton
                         className="text-red-600 hover:bg-red-50"
                         onClick={() => handleDelete(d)}
@@ -302,10 +300,10 @@ export function Documents() {
           {visibility === 'PRIVATE' && (
             <Field label="Partager avec">
               <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2">
-                {(managers ?? []).length === 0 && (
+                {(shareTargets ?? []).length === 0 && (
                   <p className="px-2 py-1 text-sm text-gray-400">Aucune personne à partager</p>
                 )}
-                {(managers ?? []).map((m) => (
+                {(shareTargets ?? []).map((m) => (
                   <label key={m.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50">
                     <input
                       type="checkbox"
@@ -320,6 +318,7 @@ export function Documents() {
                       className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                     />
                     <span className="text-gray-700">{m.fullName}</span>
+                    <span className="text-xs text-gray-400">{m.role}</span>
                   </label>
                 ))}
               </div>
