@@ -114,7 +114,10 @@ const nf = (overrides: Partial<NoteFraisDto> = {}): NoteFraisDto => ({
       date: '2026-08-01',
       category: 'Restaurant',
       label: 'Déjeuner client',
-      amount: 125.5,
+      montantHT: 125.5,
+      montantTTC: 125.5,
+      enseigne: 'McDonald\'s',
+      adresse: '1 rue de Paris',
       reimbursed: false,
       comment: null,
     },
@@ -252,7 +255,7 @@ describe('NoteFraisList', () => {
     fireEvent.change(within(dialog).getByPlaceholderText('Libellé / action'), {
       target: { value: 'Train' },
     })
-    fireEvent.change(within(dialog).getByPlaceholderText('Montant €'), {
+    fireEvent.change(within(dialog).getByPlaceholderText('Montant HT €'), {
       target: { value: '45' },
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }))
@@ -267,7 +270,10 @@ describe('NoteFraisList', () => {
             date: today,
             category: 'Déplacement',
             label: 'Train',
-            amount: 45,
+            montantHT: 45,
+            montantTTC: 0,
+            enseigne: null,
+            adresse: null,
             reimbursed: false,
             comment: null,
           },
@@ -306,7 +312,7 @@ describe('NoteFraisList', () => {
     })
 
     await waitFor(() => expect(ocrImageTextMock).toHaveBeenCalled())
-    await waitFor(() => expect(within(dialog).getByPlaceholderText('Montant €')).toHaveValue(25.5))
+    await waitFor(() => expect(within(dialog).getByPlaceholderText('Montant TTC €')).toHaveValue(25.5))
     expect(within(dialog).getByPlaceholderText('Libellé / action')).toHaveValue('facture')
     expect(
       within(dialog).getByPlaceholderText(

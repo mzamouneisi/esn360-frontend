@@ -21,7 +21,10 @@ interface LineForm {
   date: string
   category: string
   label: string
-  amount: string
+  enseigne: string
+  adresse: string
+  montantHT: string
+  montantTTC: string
   reimbursed: boolean
   comment: string
 }
@@ -39,10 +42,19 @@ function newLine(): LineForm {
     date: new Date().toISOString().slice(0, 10),
     category: 'Déplacement',
     label: '',
-    amount: '',
+    enseigne: '',
+    adresse: '',
+    montantHT: '',
+    montantTTC: '',
     reimbursed: false,
     comment: '',
   }
+}
+
+function lineAmount(line: LineForm): number {
+  const ttc = Number(line.montantTTC) || 0
+  const ht = Number(line.montantHT) || 0
+  return ttc > 0 ? ttc : ht
 }
 
 function largestAmount(text: string): number | null {
@@ -90,7 +102,7 @@ function fillLineFromText(lines: LineForm[], text: string, filename: string): Li
   const updated: LineForm = {
     ...first,
     date: date ?? first.date,
-    amount: amount !== null ? String(amount) : first.amount,
+    montantTTC: amount !== null ? String(amount) : first.montantTTC,
     category: category ?? first.category,
     label: first.label.trim() ? first.label : label,
   }
@@ -174,7 +186,10 @@ export function NoteFraisList() {
               date: l.date,
               category: l.category,
               label: l.label,
-              amount: String(l.amount),
+              enseigne: l.enseigne ?? '',
+              adresse: l.adresse ?? '',
+              montantHT: String(l.montantHT),
+              montantTTC: String(l.montantTTC),
               reimbursed: l.reimbursed,
               comment: l.comment ?? '',
             }))
@@ -238,12 +253,15 @@ export function NoteFraisList() {
         month: form.month,
         year: form.year,
         lines: form.lines
-          .filter((l) => l.label.trim() || l.amount)
+          .filter((l) => l.label.trim() || l.montantHT || l.montantTTC)
           .map((l) => ({
             date: l.date || new Date().toISOString().slice(0, 10),
             category: l.category,
             label: l.label.trim() || 'Dépense',
-            amount: Number(l.amount) || 0,
+            montantHT: Number(l.montantHT) || 0,
+            montantTTC: Number(l.montantTTC) || 0,
+            enseigne: l.enseigne.trim() || null,
+            adresse: l.adresse.trim() || null,
             reimbursed: l.reimbursed,
             comment: l.comment || null,
           })),
@@ -546,7 +564,7 @@ export function NoteFraisList() {
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-medium text-gray-700">Lignes de dépenses</p>
               <span className="text-sm text-gray-500">
-                Total : {formatMoney(form.lines.reduce((s, l) => s + (Number(l.amount) || 0), 0))}
+                Total : {formatMoney(form.lines.reduce((s, l) => s + lineAmount(l), 0))}
               </span>
             </div>
             <div className="space-y-3">
@@ -554,7 +572,7 @@ export function NoteFraisList() {
                 <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 sm:grid-cols-12 sm:items-center">
                   <Input
                     type="date"
-                    className="sm:col-span-3"
+                    className="sm:col-span-2"
                     value={line.date}
                     onChange={(e) =>
                       setForm({
@@ -581,7 +599,7 @@ export function NoteFraisList() {
                   </Select>
                   <Input
                     placeholder="Libellé / action"
-                    className="sm:col-span-3"
+                    className="sm:col-span-2"
                     value={line.label}
                     onChange={(e) =>
                       setForm({
@@ -591,16 +609,52 @@ export function NoteFraisList() {
                     }
                   />
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Montant €"
+                    placeholder="Nom enseigne"
                     className="sm:col-span-2"
-                    value={line.amount}
+                    value={line.enseigne}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        lines: form.lines.map((l, j) => (j === i ? { ...l, amount: e.target.value } : l)),
+                        lines: form.lines.map((l, j) => (j === i ? { ...l, enseigne: e.target.value } : l)),
+                      })
+                    }
+                  />
+                  <Input
+                    placeholder="Adresse"
+                    className="sm:col-span-2"
+                    value={line.adresse}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lines: form.lines.map((l, j) => (j === i ? { ...l, adresse: e.target.value } : l)),
+                      })
+                    }
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Montant HT €"
+                    className="sm:col-span-1"
+                    value={line.montantHT}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lines: form.lines.map((l, j) => (j === i ? { ...l, montantHT: e.target.value } : l)),
+                      })
+                    }
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Montant TTC €"
+                    className="sm:col-span-1"
+                    value={line.montantTTC}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lines: form.lines.map((l, j) => (j === i ? { ...l, montantTTC: e.target.value } : l)),
                       })
                     }
                   />

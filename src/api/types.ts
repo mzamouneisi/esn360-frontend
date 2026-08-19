@@ -393,7 +393,10 @@ export interface NoteFraisLineDto {
   date: string
   category: string
   label: string
-  amount: number
+  montantHT: number
+  montantTTC: number
+  enseigne: string | null
+  adresse: string | null
   reimbursed: boolean
   comment: string | null
 }
@@ -419,7 +422,10 @@ export interface NoteFraisLineRequest {
   date: string
   category: string
   label: string
-  amount: number
+  montantHT: number
+  montantTTC: number
+  enseigne?: string | null
+  adresse?: string | null
   reimbursed: boolean
   comment?: string | null
 }
