@@ -106,7 +106,7 @@ function HorlogeNumerique() {
       <div className="font-mono text-lg font-semibold tracking-wider text-horloge">
         {time}
       </div>
-      <div className="text-xs text-gray-400">{date}</div>
+      <div className="text-lg text-gray-400">{date}</div>
     </div>
   )
 }
