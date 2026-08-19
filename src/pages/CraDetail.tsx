@@ -59,6 +59,15 @@ function dayIsValid(day: EditableDay): boolean {
   return day.dayType !== 'WORKED' || Math.abs(dayTotal(day) - 1) < 1e-9
 }
 
+function allowedDaysFor(day: EditableDay, actIndex: number): string[] {
+  const act = day.activities[actIndex]
+  const current = Number(act?.days) || 0
+  const other = dayTotal(day) - current
+  const allowed = DAY_VALUES.filter((v) => other + Number(v) <= 1 + 1e-9)
+  if (act?.days && !allowed.includes(act.days)) allowed.push(act.days)
+  return allowed
+}
+
 function formatDays(value: number): string {
   return Number.isInteger(value) ? `${value} j` : `${value.toLocaleString('fr-FR')} j`
 }
@@ -240,6 +249,16 @@ export function CraDetail({
   }
 
   function updateActivity(dayIndex: number, actIndex: number, patch: Partial<EditableActivity>) {
+    if (patch.days !== undefined) {
+      const day = days[dayIndex]
+      const act = day?.activities[actIndex]
+      const current = Number(act?.days) || 0
+      const other = day ? dayTotal(day) - current : 0
+      if (other + Number(patch.days) > 1 + 1e-9) {
+        setFormError('Le total du jour ne peut pas dépasser 1 jour.')
+        return
+      }
+    }
     setDays((prev) =>
       prev.map((d, i) =>
         i === dayIndex
@@ -253,6 +272,13 @@ export function CraDetail({
   }
 
   function addActivity(dayIndex: number) {
+    const day = days[dayIndex]
+    if (!day || dayTotal(day) >= 1) {
+      setFormError('Le total du jour ne peut pas dépasser 1 jour.')
+      return
+    }
+    const remaining = 1 - dayTotal(day)
+    const defaultDays = remaining >= 1 ? '1' : '0.5'
     setDays((prev) =>
       prev.map((d, i) =>
         i === dayIndex
@@ -262,7 +288,7 @@ export function CraDetail({
                 ...d.activities,
                 {
                   activityId: currentActivity ? String(currentActivity.id) : '',
-                  days: '1',
+                  days: defaultDays,
                   comment: '',
                 },
               ],
@@ -741,7 +767,7 @@ export function CraDetail({
                                     value={act.days}
                                     onChange={(e) => updateActivity(i, j, { days: e.target.value })}
                                   >
-                                    {DAY_VALUES.map((dv) => (
+                                    {allowedDaysFor(day, j).map((dv) => (
                                       <option key={dv} value={dv}>
                                         {formatDays(Number(dv))}
                                       </option>
@@ -766,7 +792,8 @@ export function CraDetail({
                           {editable && (
                             <button
                               onClick={() => addActivity(i)}
-                              className="text-sm font-medium text-brand-600 hover:text-brand-700"
+                              disabled={total >= 1}
+                              className="text-sm font-medium text-brand-600 hover:text-brand-700 disabled:cursor-not-allowed disabled:text-gray-400"
                             >
                               + Ajouter un événement
                             </button>
@@ -1135,7 +1162,7 @@ function EventModal({
                       value={act.days}
                       onChange={(e) => onUpdateActivity(j, { days: e.target.value })}
                     >
-                      {DAY_VALUES.map((dv) => (
+                      {allowedDaysFor(day, j).map((dv) => (
                         <option key={dv} value={dv}>
                           {formatDays(Number(dv))}
                         </option>
@@ -1174,7 +1201,8 @@ function EventModal({
         {editable && (
           <button
             onClick={onAddActivity}
-            className="text-sm font-medium text-brand-600 hover:text-brand-700"
+            disabled={total >= 1}
+            className="text-sm font-medium text-brand-600 hover:text-brand-700 disabled:cursor-not-allowed disabled:text-gray-400"
           >
             + Ajouter un événement
           </button>
