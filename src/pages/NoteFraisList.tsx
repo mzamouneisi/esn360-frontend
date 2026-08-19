@@ -44,6 +44,58 @@ function newLine(): LineForm {
   }
 }
 
+function largestAmount(text: string): number | null {
+  const matches = text.match(/\d+(?:[.,]\d{1,2})?\s*€/g) ?? []
+  let best: number | null = null
+  for (const m of matches) {
+    const n = parseFloat(m.replace(/€/g, '').replace(',', '.').trim())
+    if (!Number.isNaN(n) && (best === null || n > best)) best = n
+  }
+  return best
+}
+
+function firstDate(text: string): string | null {
+  const m = text.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/)
+  if (!m) return null
+  const [, d, mo, y] = m
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`
+}
+
+function inferCategory(text: string): string | null {
+  const t = text.toLowerCase()
+  const rules: [RegExp, string][] = [
+    [/restaurant|déjeuner|dejeuner|dîner|diner|repas|pizza|kebab/, 'Restaurant'],
+    [/train|sncf|avion|taxi|uber|métro|metro|bus|tram|navette/, 'Transport'],
+    [/hôtel|hotel|nuitée|nuit|chambre|airbnb|booking/, 'Hébergement'],
+    [/essence|carburant|gasoil|diesel|sans plomb|sp95|sp98/, 'Essence'],
+    [/péage|peage|autoroute|vinci|sanef/, 'Péage'],
+    [/parking|stationnement/, 'Stationnement'],
+    [/téléphone|telephone|mobile|forfait/, 'Téléphone'],
+    [/matériel|materiel|ordinateur|écran|clavier|souris/, 'Matériel'],
+  ]
+  for (const [re, cat] of rules) {
+    if (re.test(t)) return cat
+  }
+  return null
+}
+
+function fillLineFromText(lines: LineForm[], text: string, filename: string): LineForm[] {
+  const first = lines[0] ?? newLine()
+  const rest = lines.slice(1)
+  const amount = largestAmount(text)
+  const date = firstDate(text)
+  const category = inferCategory(text)
+  const label = filename.replace(/\.[^.]+$/, '') || 'Dépense'
+  const updated: LineForm = {
+    ...first,
+    date: date ?? first.date,
+    amount: amount !== null ? String(amount) : first.amount,
+    category: category ?? first.category,
+    label: first.label.trim() ? first.label : label,
+  }
+  return [updated, ...rest]
+}
+
 export function NoteFraisList() {
   const { user } = useAuth()
   const now = new Date()
@@ -133,12 +185,29 @@ export function NoteFraisList() {
     setModalOpen(true)
   }
 
-  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (attachmentUrl) URL.revokeObjectURL(attachmentUrl)
     setAttachmentUrl(URL.createObjectURL(file))
     setAttachmentName(file.name)
+
+    try {
+      const { text } = await noteFraisApi.extractText(file)
+      if (text) {
+        setForm((prev) => ({
+          ...prev,
+          infosFacture: text,
+          lines: fillLineFromText(prev.lines, text, file.name),
+        }))
+      } else if (/\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name)) {
+        setFormError(
+          'OCR non disponible pour les images : saisissez les informations manuellement.',
+        )
+      }
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
   }
 
   async function handleSubmit(e: FormEvent) {

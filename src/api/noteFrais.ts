@@ -16,6 +16,11 @@ export const noteFraisApi = {
   reject: (id: number, comment: string) =>
     api.post<NoteFraisDto>(`/note-frais/${id}/reject`, { comment }),
   delete: (id: number) => api.delete<void>(`/note-frais/${id}`),
+  extractText: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.upload<{ text: string }>('/note-frais/extract-text', formData)
+  },
   totalsByMonth: (socId: number, year: number) =>
     api.get<Record<string, number>>(`/note-frais/stats/by-month/${socId}/${year}`),
   totalsByCategory: (socId: number, year: number) =>
