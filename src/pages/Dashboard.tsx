@@ -59,19 +59,42 @@ export function Dashboard() {
           )}
 
           {(user.role === 'RESPONSIBLE_SOC' || user.role === 'MANAGER') && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <StatCard label="Consultants" value={data.consultants ?? 0} to="/consultants" />
-              <StatCard label="CRA en attente" value={data.pendingCras ?? 0} to="/cras" />
               <StatCard
                 label="Notes de frais en attente"
                 value={data.pendingNoteFrais ?? 0}
                 to="/notes-frais"
               />
-              <StatCard
-                label="CRA validés ce mois"
-                value={data.validatedCrasThisMonth ?? 0}
-                to="/cras"
-              />
+              <Card className="p-5">
+                <p className="text-sm font-medium text-gray-500">Cra cette année</p>
+                <dl className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-sm text-gray-600">En attente de validation</dt>
+                    <dd className="text-sm font-semibold text-amber-600">
+                      {data.craYearSubmitted ?? 0}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-sm text-gray-600">Validés</dt>
+                    <dd className="text-sm font-semibold text-green-600">
+                      {data.craYearValidated ?? 0}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-sm text-gray-600">Rejetés</dt>
+                    <dd className="text-sm font-semibold text-red-600">
+                      {data.craYearRejected ?? 0}
+                    </dd>
+                  </div>
+                </dl>
+                <Link
+                  to="/cras"
+                  className="mt-4 inline-block text-sm font-medium text-brand-600 hover:text-brand-700"
+                >
+                  Voir les CRA →
+                </Link>
+              </Card>
             </div>
           )}
 
@@ -137,7 +160,6 @@ export function Dashboard() {
             {user.role === 'ADMIN' && (
               <QuickLink to="/logs" title="Logs du serveur" description="Voir les dernières lignes du journal serveur" />
             )}
-            <QuickLink to="/cras" title="CRA" description="Saisir et valider les comptes rendus d'activité" />
             <QuickLink to="/notes-frais" title="Notes de frais" description="Gérer les remboursements et dépenses" />
             <QuickLink to="/clients" title="Clients" description="Gérer le portefeuille clients" />
             <QuickLink to="/missions" title="Missions" description="Suivre les missions en cours" />

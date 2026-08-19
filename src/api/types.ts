@@ -520,9 +520,10 @@ export interface DashboardOverview {
   totalConsultants?: number
   activeSubscriptions?: number
   consultants?: number
-  pendingCras?: number
   pendingNoteFrais?: number
-  validatedCrasThisMonth?: number
+  craYearSubmitted?: number
+  craYearValidated?: number
+  craYearRejected?: number
   craStatus?: CraStatus
   craTotalHours?: number
   craTotalDays?: number
