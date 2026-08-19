@@ -526,6 +526,7 @@ export interface DashboardOverview {
   craYearSubmitted?: number
   craYearValidated?: number
   craYearRejected?: number
+  craYearTotal?: number
   craStatus?: CraStatus
   craTotalHours?: number
   craTotalDays?: number

@@ -67,23 +67,24 @@ export function Dashboard() {
                 to="/notes-frais"
               />
               <Card className="p-5">
-                <p className="text-sm font-medium text-gray-500">Cra cette année</p>
-                <dl className="mt-3 space-y-2">
+                <p className="text-sm font-bold text-gray-900">Cra cette année</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{data.craYearTotal ?? 0}</p>
+                <dl className="mt-3 space-y-2 border-t border-gray-100 pt-3">
                   <div className="flex items-center justify-between">
-                    <dt className="text-sm text-gray-600">En attente de validation</dt>
-                    <dd className="text-sm font-semibold text-amber-600">
+                    <dt className="text-sm font-medium text-gray-600">En attente de validation</dt>
+                    <dd className="text-sm font-bold text-amber-600">
                       {data.craYearSubmitted ?? 0}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="text-sm text-gray-600">Validés</dt>
-                    <dd className="text-sm font-semibold text-green-600">
+                    <dt className="text-sm font-medium text-gray-600">Validés</dt>
+                    <dd className="text-sm font-bold text-green-600">
                       {data.craYearValidated ?? 0}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <dt className="text-sm text-gray-600">Rejetés</dt>
-                    <dd className="text-sm font-semibold text-red-600">
+                    <dt className="text-sm font-medium text-gray-600">Rejetés</dt>
+                    <dd className="text-sm font-bold text-red-600">
                       {data.craYearRejected ?? 0}
                     </dd>
                   </div>
