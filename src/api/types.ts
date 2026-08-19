@@ -165,6 +165,7 @@ export interface ConsultantDto {
   managerName: string | null
   hasUserAccount: boolean
   username: string | null
+  role: string
 }
 
 export interface ConsultantRequest {
@@ -183,6 +184,7 @@ export interface ConsultantRequest {
   managerId?: number | null
   username?: string | null
   password?: string | null
+  role?: string
 }
 
 export interface ConsultantSummary {

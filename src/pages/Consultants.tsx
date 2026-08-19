@@ -21,6 +21,7 @@ import { useCallback, useEffect } from 'react'
 import { useSoc } from '../soc/SocContext'
 
 interface FormState {
+  role: string
   firstName: string
   lastName: string
   email: string
@@ -39,6 +40,7 @@ interface FormState {
 }
 
 const emptyForm: FormState = {
+  role: 'CONSULTANT',
   firstName: '',
   lastName: '',
   email: '',
@@ -56,11 +58,20 @@ const emptyForm: FormState = {
   password: '',
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  CONSULTANT: 'Consultant',
+  MANAGER: 'Manager',
+  RESPONSIBLE_SOC: 'Responsable société',
+}
+
 export function Consultants() {
   const { user } = useAuth()
   const { selectedSocId: workingSocContextId } = useSoc()
   const isAdmin = user?.role === 'ADMIN'
+  const isManager = user?.role === 'MANAGER'
   const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const canCreate = canEdit || isManager
+  const canCreateManager = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
   const workingSocId = isAdmin ? undefined : (workingSocContextId ?? user?.socId ?? undefined)
 
   const [search, setSearch] = useState('')
@@ -113,14 +124,21 @@ export function Consultants() {
   const managerOptions = useMemo(() => managers ?? [], [managers])
 
   function openCreate() {
-    setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') })
+    setForm({
+      ...emptyForm,
+      role: 'CONSULTANT',
+      socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? ''),
+      managerId: isManager && user?.id != null ? String(user.id) : '',
+    })
     setEditing(null)
     setFormError(null)
     setModalOpen(true)
   }
 
   function openEdit(c: ConsultantDto) {
+    if (c.role !== 'CONSULTANT') return
     setForm({
+      role: 'CONSULTANT',
       firstName: c.firstName,
       lastName: c.lastName,
       email: c.email ?? '',
@@ -148,11 +166,16 @@ export function Consultants() {
       setFormError('Le prénom et le nom sont obligatoires')
       return
     }
-    if (isAdmin && !form.socId) {
+    if (!isAdmin && !form.socId.trim()) {
       setFormError('Sélectionnez la société')
       return
     }
+    const creatingManager = !editing && form.role === 'MANAGER'
     const creatingAccount = !editing && !!form.username.trim()
+    if (creatingManager && (!form.username.trim() || !form.email.trim() || !form.password.trim())) {
+      setFormError('Ligne de compte : nom d’utilisateur, email et mot de passe sont requis pour un manager')
+      return
+    }
     if (creatingAccount && (!form.email.trim() || !form.password.trim())) {
       setFormError('Email et mot de passe requis pour créer un compte utilisateur')
       return
@@ -161,6 +184,7 @@ export function Consultants() {
     setFormError(null)
     try {
       const payload = {
+        role: creatingManager ? 'MANAGER' : 'CONSULTANT',
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim() || null,
@@ -174,8 +198,8 @@ export function Consultants() {
         nationality: form.nationality || null,
         socId: isAdmin ? Number(form.socId) : Number(workingSocId ?? user?.socId ?? 0),
         managerId: form.managerId ? Number(form.managerId) : null,
-        username: creatingAccount ? form.username.trim() : null,
-        password: creatingAccount ? form.password : null,
+        username: creatingManager ? form.username.trim() : creatingAccount ? form.username.trim() : null,
+        password: creatingManager ? form.password : creatingAccount ? form.password : null,
       }
       if (editing) {
         await consultantsApi.update(editing.id, payload)
@@ -228,13 +252,15 @@ export function Consultants() {
         actions={
           <>
             <RefreshButton onClick={reload} />
-            {canEdit ? (
+            {canCreate ? (
               <>
-                <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') }) }}>
-                  Importer CSV
-                </InlineButton>
+                {canEdit ? (
+                  <InlineButton onClick={() => { setImportOpen(true); setImportError(null); setImportResult(null); setImportFile(null); setForm({ ...emptyForm, socId: isAdmin ? '' : String(workingSocId ?? user?.socId ?? '') }) }}>
+                    Importer CSV
+                  </InlineButton>
+                ) : null}
                 <Button className="w-auto" onClick={openCreate}>
-                  + Nouveau consultant
+                  + Nouveau collaborateur
                 </Button>
               </>
             ) : null}
@@ -257,13 +283,13 @@ export function Consultants() {
       {!loading && data && (
         <>
           <Table
-            rowKey={(c) => c.id}
-            onRowClick={canEdit ? openEdit : undefined}
+            rowKey={(c) => `${c.role}-${c.id}`}
+            onRowClick={canEdit ? (c) => { if (c.role === 'CONSULTANT') openEdit(c) } : undefined}
             rows={data.items}
             columns={[
               {
                 key: 'name',
-                label: 'Consultant',
+                label: 'Collaborateur',
                 render: (c) => (
                   <div>
                     <p className="font-medium text-gray-900">
@@ -271,6 +297,15 @@ export function Consultants() {
                     </p>
                     <p className="text-xs text-gray-500">{c.position ?? '—'}</p>
                   </div>
+                ),
+              },
+              {
+                key: 'role',
+                label: 'Rôle',
+                render: (c) => (
+                  <Badge kind={c.role === 'RESPONSIBLE_SOC' ? 'info' : c.role === 'MANAGER' ? 'warning' : 'muted'}>
+                    {ROLE_LABELS[c.role] ?? c.role}
+                  </Badge>
                 ),
               },
               {
@@ -324,7 +359,7 @@ export function Consultants() {
                 key: 'actions',
                 label: '',
                 render: (c) =>
-                  canEdit ? (
+                  canEdit && c.role === 'CONSULTANT' ? (
                     <div className="flex justify-end gap-1">
                       <InlineButton onClick={(e) => { e.stopPropagation(); openEdit(c) }}>
                         Modifier
@@ -361,7 +396,11 @@ export function Consultants() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? `Modifier ${editing.firstName} ${editing.lastName}` : 'Nouveau consultant'}
+        title={editing
+          ? `Modifier ${editing.firstName} ${editing.lastName}`
+          : form.role === 'MANAGER'
+            ? 'Nouveau manager'
+            : 'Nouveau collaborateur'}
         size="lg"
         footer={
           <>
@@ -377,6 +416,19 @@ export function Consultants() {
           {formError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {formError}
+            </div>
+          )}
+          {!editing && canCreateManager && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Type de collaborateur">
+                <Select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value, username: '', password: '' })}
+                >
+                  <option value="CONSULTANT">Consultant</option>
+                  <option value="MANAGER">Manager</option>
+                </Select>
+              </Field>
             </div>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -395,26 +447,32 @@ export function Consultants() {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </Field>
           </div>
+          {form.role !== 'MANAGER' && (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Poste">
+                  <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
+                </Field>
+                <Field label="Nationalité">
+                  <Input value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} placeholder="FR" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Date d'embauche">
+                  <Input type="date" value={form.hireDate} onChange={(e) => setForm({ ...form, hireDate: e.target.value })} />
+                </Field>
+                <Field label="Date de naissance">
+                  <Input type="date" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+                </Field>
+              </div>
+            </>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Poste">
-              <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-            </Field>
-            <Field label="Nationalité">
-              <Input value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} placeholder="FR" />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Date d'embauche">
-              <Input type="date" value={form.hireDate} onChange={(e) => setForm({ ...form, hireDate: e.target.value })} />
-            </Field>
-            <Field label="Date de naissance">
-              <Input type="date" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="N° de sécurité sociale">
-              <Input value={form.socialNumber} onChange={(e) => setForm({ ...form, socialNumber: e.target.value })} />
-            </Field>
+            {form.role !== 'MANAGER' && (
+              <Field label="N° de sécurité sociale">
+                <Input value={form.socialNumber} onChange={(e) => setForm({ ...form, socialNumber: e.target.value })} />
+              </Field>
+            )}
             <Field label="Manager">
               <Select value={form.managerId} onChange={(e) => setForm({ ...form, managerId: e.target.value })}>
                 <option value="">Aucun</option>
@@ -426,24 +484,26 @@ export function Consultants() {
               </Select>
             </Field>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Salaire de base">
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.baseSalary}
-                onChange={(e) => setForm({ ...form, baseSalary: e.target.value })}
-              />
-            </Field>
-            <Field label="Devise">
-              <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="CHF">CHF</option>
-              </Select>
-            </Field>
-          </div>
+          {form.role !== 'MANAGER' && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Salaire de base">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.baseSalary}
+                  onChange={(e) => setForm({ ...form, baseSalary: e.target.value })}
+                />
+              </Field>
+              <Field label="Devise">
+                <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                  <option value="CHF">CHF</option>
+                </Select>
+              </Field>
+            </div>
+          )}
           {isAdmin && (
             <Field label="Société">
               <Select value={form.socId} onChange={(e) => setForm({ ...form, socId: e.target.value })}>
@@ -459,7 +519,7 @@ export function Consultants() {
           {!editing && (
             <div className="rounded-lg border border-brand-200 bg-brand-50 p-3">
               <p className="mb-2 text-sm font-medium text-brand-800">
-                Compte utilisateur (optionnel)
+                {form.role === 'MANAGER' ? 'Compte utilisateur *' : 'Compte utilisateur (optionnel)'}
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Field label="Nom d'utilisateur">
@@ -473,7 +533,9 @@ export function Consultants() {
                 </Field>
               </div>
               <p className="mt-2 text-xs text-brand-700">
-                Le consultant devra changer son mot de passe à la première connexion.
+                {form.role === 'MANAGER'
+                  ? 'Le manager devra changer son mot de passe à la première connexion.'
+                  : 'Le collaborateur devra changer son mot de passe à la première connexion.'}
               </p>
             </div>
           )}
