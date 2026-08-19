@@ -76,7 +76,7 @@ function fillLineFromText(lines: LineForm[], text: string, filename: string): Li
     montantHT: parsed.montantHT != null ? String(parsed.montantHT) : base.montantHT,
     montantTTC: parsed.montantTTC != null ? String(parsed.montantTTC) : base.montantTTC,
     category: parsed.category ?? base.category,
-    label: base.label.trim() ? base.label : parsed.label,
+    label: base.label.trim() ? base.label : parsed.label ?? '',
     enseigne: parsed.enseigne ?? base.enseigne,
     adresse: parsed.adresse ?? base.adresse,
   })

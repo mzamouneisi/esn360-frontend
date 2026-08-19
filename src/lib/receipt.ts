@@ -196,11 +196,30 @@ function inferHTByTax(lines: string[], ttc: number): number | null {
   return Math.round((ttc - tax) * 100) / 100
 }
 
+const VAT_RATES = new Set([2.1, 5.5, 8.5, 10, 20])
+
+function rateRe(): RegExp {
+  return /\(?(\d{1,2}[.,]\d{2})\s*%?\)?/g
+}
+
+function findHTByVatRate(lines: string[], ttc: number): number | null {
+  for (const line of lines) {
+    if (!/[()%]/.test(line)) continue
+    for (const m of line.matchAll(rateRe())) {
+      const rate = parseFloat(m[1].replace(',', '.'))
+      if (!VAT_RATES.has(rate)) continue
+      const ht = Math.round((ttc / (1 + rate / 100)) * 100) / 100
+      if (ht > 0 && Math.abs(ht - ttc) > 0.001) return ht
+    }
+  }
+  return null
+}
+
 function findHT(lines: string[], ttc: number | null): number | null {
   const explicit = findExplicitHT(lines)
   if (explicit != null) return explicit
   if (ttc == null) return null
-  return inferHTByEquation(lines, ttc) ?? inferHTByTax(lines, ttc)
+  return inferHTByEquation(lines, ttc) ?? inferHTByTax(lines, ttc) ?? findHTByVatRate(lines, ttc)
 }
 
 const ENSEIGNE_SKIP = /[:/@€%]|^(?:TEL|TOL|CAISSE|CAISS|TICKET|SIRET|TVA|SIRE)\b|^[ÀA]\s|(?:somme|payer|règlement|reglement|total|montant|prix|tick)/i
