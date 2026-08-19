@@ -17,6 +17,7 @@ const {
   deleteMock,
   summariesMock,
   userMock,
+  ocrImageTextMock,
 } = vi.hoisted(() => ({
   findBySocYearMock: vi.fn(),
   findByConsultantYearMock: vi.fn(),
@@ -29,6 +30,7 @@ const {
   deleteMock: vi.fn(),
   summariesMock: vi.fn(),
   userMock: { value: null as unknown as UserDto },
+  ocrImageTextMock: vi.fn(),
 }))
 
 vi.mock('../auth/AuthContext', () => ({
@@ -61,6 +63,11 @@ vi.mock('../api/noteFrais', () => ({
 
 vi.mock('../api/consultants', () => ({
   consultantsApi: { summaries: summariesMock },
+}))
+
+vi.mock('../lib/ocr', () => ({
+  isImageFile: (name: string) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(name),
+  ocrImageText: ocrImageTextMock,
 }))
 
 const managerUser = {
@@ -117,6 +124,7 @@ const nf = (overrides: Partial<NoteFraisDto> = {}): NoteFraisDto => ({
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  ocrImageTextMock.mockReset()
   userMock.value = null as unknown as UserDto
 })
 
@@ -279,5 +287,54 @@ describe('NoteFraisList', () => {
     renderList()
 
     expect(await screen.findByText('Erreur serveur')).toBeInTheDocument()
+  })
+
+  it('lit une image via OCR et pré-remplit les champs', async () => {
+    userMock.value = managerUser
+    findBySocYearMock.mockResolvedValue([])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    ocrImageTextMock.mockResolvedValue('Restaurant McDo 25,50 € le 12/03/2026')
+
+    renderList()
+    fireEvent.click(screen.getByRole('button', { name: '+ Nouvelle note de frais' }))
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText(/Joindre une facture/), {
+      target: { files: [new File(['fake'], 'facture.png', { type: 'image/png' })] },
+    })
+
+    await waitFor(() => expect(ocrImageTextMock).toHaveBeenCalled())
+    await waitFor(() => expect(within(dialog).getByPlaceholderText('Montant €')).toHaveValue(25.5))
+    expect(within(dialog).getByPlaceholderText('Libellé / action')).toHaveValue('facture')
+    expect(
+      within(dialog).getByPlaceholderText(
+        'Collez ou saisissez ici le contenu de la facture / du ticket…',
+      ),
+    ).toHaveValue('Restaurant McDo 25,50 € le 12/03/2026')
+  })
+
+  it('affiche une erreur quand l’OCR ne trouve pas de texte dans l’image', async () => {
+    userMock.value = managerUser
+    findBySocYearMock.mockResolvedValue([])
+    totalsByMonthMock.mockResolvedValue({})
+    totalsByCategoryMock.mockResolvedValue({})
+    summariesMock.mockResolvedValue([])
+    ocrImageTextMock.mockResolvedValue('')
+
+    renderList()
+    fireEvent.click(screen.getByRole('button', { name: '+ Nouvelle note de frais' }))
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText(/Joindre une facture/), {
+      target: { files: [new File(['fake'], 'facture.png', { type: 'image/png' })] },
+    })
+
+    await waitFor(() =>
+      expect(
+        within(dialog).getByText(/OCR non disponible pour cette image/),
+      ).toBeInTheDocument(),
+    )
   })
 })

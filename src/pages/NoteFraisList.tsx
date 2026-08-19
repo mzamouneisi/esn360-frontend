@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { noteFraisApi } from '../api/noteFrais'
 import { consultantsApi } from '../api/consultants'
+import { isImageFile, ocrImageText } from '../lib/ocr'
 import { ApiError } from '../api/client'
 import { useAsync } from '../lib/useAsync'
 import { Button, Card, Field, InlineButton, Input, RefreshButton, Select, Spinner, Textarea } from '../components/ui'
@@ -142,6 +143,7 @@ export function NoteFraisList() {
   const [formError, setFormError] = useState<string | null>(null)
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null)
   const [attachmentName, setAttachmentName] = useState<string | null>(null)
+  const [ocrPending, setOcrPending] = useState(false)
 
   if (!user) return null
 
@@ -157,6 +159,7 @@ export function NoteFraisList() {
     setFormError(null)
     setAttachmentUrl(null)
     setAttachmentName(null)
+    setOcrPending(false)
     setModalOpen(true)
   }
 
@@ -182,6 +185,7 @@ export function NoteFraisList() {
     setFormError(null)
     setAttachmentUrl(null)
     setAttachmentName(null)
+    setOcrPending(false)
     setModalOpen(true)
   }
 
@@ -191,18 +195,32 @@ export function NoteFraisList() {
     if (attachmentUrl) URL.revokeObjectURL(attachmentUrl)
     setAttachmentUrl(URL.createObjectURL(file))
     setAttachmentName(file.name)
+    setFormError(null)
 
     try {
-      const { text } = await noteFraisApi.extractText(file)
-      if (text) {
+      let text = ''
+      if (isImageFile(file.name)) {
+        setOcrPending(true)
+        try {
+          text = await ocrImageText(file)
+        } finally {
+          setOcrPending(false)
+        }
+      } else {
+        const result = await noteFraisApi.extractText(file)
+        text = result.text ?? ''
+      }
+      if (text.trim()) {
         setForm((prev) => ({
           ...prev,
           infosFacture: text,
           lines: fillLineFromText(prev.lines, text, file.name),
         }))
-      } else if (/\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name)) {
+      } else {
         setFormError(
-          'OCR non disponible pour les images : saisissez les informations manuellement.',
+          isImageFile(file.name)
+            ? 'OCR non disponible pour cette image : saisissez les informations manuellement.'
+            : 'Aucun texte extrait de ce fichier : saisissez les informations manuellement.',
         )
       }
     } catch (err) {
@@ -651,9 +669,12 @@ export function NoteFraisList() {
                 </span>
               )}
             </div>
+            {ocrPending && (
+              <p className="mt-2 text-sm text-brand-700">Lecture de la facture en cours (OCR)…</p>
+            )}
             {attachmentUrl && (
               <div className="mt-3 overflow-hidden rounded-lg border border-gray-200">
-                {attachmentName && /\.(png|jpe?g|gif|webp|bmp)$/i.test(attachmentName) ? (
+                {attachmentName && isImageFile(attachmentName) ? (
                   <img src={attachmentUrl} alt="Aperçu de la facture" className="max-h-72 w-full object-contain" />
                 ) : (
                   <iframe src={attachmentUrl} title="Aperçu du document" className="h-72 w-full" />
