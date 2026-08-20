@@ -39,13 +39,6 @@ interface FormState {
   password: string
 }
 
-interface PersonForm {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-}
-
 const emptyForm: FormState = {
   role: 'CONSULTANT',
   firstName: '',
@@ -115,12 +108,6 @@ export function Consultants() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const [personEditing, setPersonEditing] = useState<ConsultantDto | null>(null)
-  const [personForm, setPersonForm] = useState<PersonForm>({ firstName: '', lastName: '', email: '', phone: '' })
-  const [personModalOpen, setPersonModalOpen] = useState(false)
-  const [personSubmitting, setPersonSubmitting] = useState(false)
-  const [personError, setPersonError] = useState<string | null>(null)
-
   const [historyFor, setHistoryFor] = useState<ConsultantDto | null>(null)
   const [historyItems, setHistoryItems] = useState<HistoConsultantDto[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -156,68 +143,40 @@ export function Consultants() {
 
   function openEdit(c: ConsultantDto) {
     if (c.person) {
-      openEditPerson(c)
-      return
+      setForm({
+        ...emptyForm,
+        role: c.role,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        email: c.email ?? '',
+        phone: c.phone ?? '',
+        socId: String(c.socId ?? workingSocId ?? user?.socId ?? ''),
+        managerId: c.managerId != null ? String(c.managerId) : '',
+      })
+    } else {
+      if (c.role !== 'CONSULTANT') return
+      setForm({
+        role: 'CONSULTANT',
+        firstName: c.firstName,
+        lastName: c.lastName,
+        email: c.email ?? '',
+        phone: c.phone ?? '',
+        position: c.position ?? '',
+        hireDate: c.hireDate ?? '',
+        birthDate: c.birthDate ?? '',
+        socialNumber: c.socialNumber ?? '',
+        baseSalary: c.baseSalary != null ? String(c.baseSalary) : '',
+        currency: c.currency ?? 'EUR',
+        nationality: c.nationality ?? '',
+        socId: String(c.socId ?? workingSocId ?? user?.socId ?? ''),
+        managerId: c.managerId != null ? String(c.managerId) : '',
+        username: c.username ?? '',
+        password: '',
+      })
     }
-    if (c.role !== 'CONSULTANT') return
-    setForm({
-      role: 'CONSULTANT',
-      firstName: c.firstName,
-      lastName: c.lastName,
-      email: c.email ?? '',
-      phone: c.phone ?? '',
-      position: c.position ?? '',
-      hireDate: c.hireDate ?? '',
-      birthDate: c.birthDate ?? '',
-      socialNumber: c.socialNumber ?? '',
-      baseSalary: c.baseSalary != null ? String(c.baseSalary) : '',
-      currency: c.currency ?? 'EUR',
-      nationality: c.nationality ?? '',
-      socId: String(c.socId ?? workingSocId ?? user?.socId ?? ''),
-      managerId: c.managerId != null ? String(c.managerId) : '',
-      username: c.username ?? '',
-      password: '',
-    })
     setEditing(c)
     setFormError(null)
     setModalOpen(true)
-  }
-
-  function openEditPerson(c: ConsultantDto) {
-    setPersonEditing(c)
-    setPersonForm({
-      firstName: c.firstName,
-      lastName: c.lastName,
-      email: c.email ?? '',
-      phone: c.phone ?? '',
-    })
-    setPersonError(null)
-    setPersonModalOpen(true)
-  }
-
-  async function handlePersonSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!personForm.firstName.trim() || !personForm.lastName.trim()) {
-      setPersonError('Le prénom et le nom sont obligatoires')
-      return
-    }
-    if (!personEditing) return
-    setPersonSubmitting(true)
-    setPersonError(null)
-    try {
-      await consultantsApi.updatePerson(personEditing.id, {
-        firstName: personForm.firstName.trim(),
-        lastName: personForm.lastName.trim(),
-        email: personForm.email.trim() || null,
-        phone: personForm.phone.trim() || null,
-      })
-      setPersonModalOpen(false)
-      reload()
-    } catch (err) {
-      setPersonError(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    } finally {
-      setPersonSubmitting(false)
-    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -230,10 +189,10 @@ export function Consultants() {
       setFormError('Sélectionnez la société')
       return
     }
-    const creatingManager = !editing && form.role === 'MANAGER'
+    const creatingPerson = !editing && (form.role === 'MANAGER' || form.role === 'RESPONSIBLE_SOC')
     const creatingAccount = !editing && !!form.username.trim()
-    if (creatingManager && (!form.username.trim() || !form.email.trim() || !form.password.trim())) {
-      setFormError('Ligne de compte : nom d’utilisateur, email et mot de passe sont requis pour un manager')
+    if (creatingPerson && (!form.username.trim() || !form.email.trim() || !form.password.trim())) {
+      setFormError('Ligne de compte : nom d’utilisateur, email et mot de passe sont requis')
       return
     }
     if (creatingAccount && (!form.email.trim() || !form.password.trim())) {
@@ -243,28 +202,38 @@ export function Consultants() {
     setSubmitting(true)
     setFormError(null)
     try {
-      const payload = {
-        role: creatingManager ? 'MANAGER' : 'CONSULTANT',
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: form.email.trim() || null,
-        phone: form.phone || null,
-        position: form.position || null,
-        hireDate: form.hireDate || null,
-        birthDate: form.birthDate || null,
-        socialNumber: form.socialNumber || null,
-        baseSalary: form.baseSalary ? Number(form.baseSalary) : null,
-        currency: form.currency || 'EUR',
-        nationality: form.nationality || null,
-        socId: isAdmin ? Number(form.socId) : Number(workingSocId ?? user?.socId ?? 0),
-        managerId: form.managerId ? Number(form.managerId) : null,
-        username: creatingManager ? form.username.trim() : creatingAccount ? form.username.trim() : null,
-        password: creatingManager ? form.password : creatingAccount ? form.password : null,
-      }
-      if (editing) {
-        await consultantsApi.update(editing.id, payload)
+      if (editing && editing.person) {
+        await consultantsApi.updatePerson(editing.id, {
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          role: form.role,
+        })
       } else {
-        await consultantsApi.create(payload)
+        const payload = {
+          role: creatingPerson ? form.role : 'CONSULTANT',
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone || null,
+          position: form.position || null,
+          hireDate: form.hireDate || null,
+          birthDate: form.birthDate || null,
+          socialNumber: form.socialNumber || null,
+          baseSalary: form.baseSalary ? Number(form.baseSalary) : null,
+          currency: form.currency || 'EUR',
+          nationality: form.nationality || null,
+          socId: isAdmin ? Number(form.socId) : Number(workingSocId ?? user?.socId ?? 0),
+          managerId: form.managerId ? Number(form.managerId) : null,
+          username: creatingPerson ? form.username.trim() : creatingAccount ? form.username.trim() : null,
+          password: creatingPerson ? form.password : creatingAccount ? form.password : null,
+        }
+        if (editing) {
+          await consultantsApi.update(editing.id, payload)
+        } else {
+          await consultantsApi.create(payload)
+        }
       }
       setModalOpen(false)
       reload()
@@ -336,7 +305,7 @@ export function Consultants() {
   return (
     <div>
       <PageHeader
-        title="Consultants"
+        title="Collaborateurs"
         subtitle="Gérez votre équipe de consultants"
         actions={
           <>
@@ -501,9 +470,11 @@ export function Consultants() {
         onClose={() => setModalOpen(false)}
         title={editing
           ? `Modifier ${editing.firstName} ${editing.lastName}`
-          : form.role === 'MANAGER'
-            ? 'Nouveau manager'
-            : 'Nouveau collaborateur'}
+          : form.role === 'RESPONSIBLE_SOC'
+            ? 'Nouveau responsable société'
+            : form.role === 'MANAGER'
+              ? 'Nouveau manager'
+              : 'Nouveau collaborateur'}
         size="lg"
         footer={
           <>
@@ -521,15 +492,16 @@ export function Consultants() {
               {formError}
             </div>
           )}
-          {!editing && canCreateManager && (
+          {((!editing && canCreateManager) || (editing?.person && canEdit)) && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Type de collaborateur">
                 <Select
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value, username: '', password: '' })}
                 >
-                  <option value="CONSULTANT">Consultant</option>
+                  {!editing && <option value="CONSULTANT">Consultant</option>}
                   <option value="MANAGER">Manager</option>
+                  <option value="RESPONSIBLE_SOC">Responsable société</option>
                 </Select>
               </Field>
             </div>
@@ -550,7 +522,7 @@ export function Consultants() {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </Field>
           </div>
-          {form.role !== 'MANAGER' && (
+          {form.role === 'CONSULTANT' && (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Poste">
@@ -571,7 +543,7 @@ export function Consultants() {
             </>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {form.role !== 'MANAGER' && (
+            {form.role === 'CONSULTANT' && (
               <Field label="N° de sécurité sociale">
                 <Input value={form.socialNumber} onChange={(e) => setForm({ ...form, socialNumber: e.target.value })} />
               </Field>
@@ -587,7 +559,7 @@ export function Consultants() {
               </Select>
             </Field>
           </div>
-          {form.role !== 'MANAGER' && (
+          {form.role === 'CONSULTANT' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Salaire de base">
                 <Input
@@ -622,7 +594,9 @@ export function Consultants() {
           {!editing && (
             <div className="rounded-lg border border-brand-200 bg-brand-50 p-3">
               <p className="mb-2 text-sm font-medium text-brand-800">
-                {form.role === 'MANAGER' ? 'Compte utilisateur *' : 'Compte utilisateur (optionnel)'}
+                {form.role === 'MANAGER' || form.role === 'RESPONSIBLE_SOC'
+                  ? 'Compte utilisateur *'
+                  : 'Compte utilisateur (optionnel)'}
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Field label="Nom d'utilisateur">
@@ -636,8 +610,8 @@ export function Consultants() {
                 </Field>
               </div>
               <p className="mt-2 text-xs text-brand-700">
-                {form.role === 'MANAGER'
-                  ? 'Le manager devra changer son mot de passe à la première connexion.'
+                {form.role === 'MANAGER' || form.role === 'RESPONSIBLE_SOC'
+                  ? 'Le collaborateur devra changer son mot de passe à la première connexion.'
                   : 'Le collaborateur devra changer son mot de passe à la première connexion.'}
               </p>
             </div>
@@ -698,45 +672,6 @@ export function Consultants() {
             </div>
           )}
           {loadingOk() && null}
-        </form>
-      </Modal>
-
-      <Modal
-        open={personModalOpen}
-        onClose={() => setPersonModalOpen(false)}
-        title={personEditing ? `Modifier ${personEditing.firstName} ${personEditing.lastName}` : 'Modifier la personne'}
-        footer={
-          <>
-            <InlineButton onClick={() => setPersonModalOpen(false)}>Annuler</InlineButton>
-            <Button className="w-auto" onClick={handlePersonSubmit as never} disabled={personSubmitting}>
-              {personSubmitting ? <Spinner className="border-white border-t-transparent" /> : null}
-              Enregistrer
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handlePersonSubmit} className="space-y-4">
-          {personError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {personError}
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Prénom *">
-              <Input value={personForm.firstName} onChange={(e) => setPersonForm({ ...personForm, firstName: e.target.value })} required />
-            </Field>
-            <Field label="Nom *">
-              <Input value={personForm.lastName} onChange={(e) => setPersonForm({ ...personForm, lastName: e.target.value })} required />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Email">
-              <Input type="email" value={personForm.email} onChange={(e) => setPersonForm({ ...personForm, email: e.target.value })} />
-            </Field>
-            <Field label="Téléphone">
-              <Input value={personForm.phone} onChange={(e) => setPersonForm({ ...personForm, phone: e.target.value })} />
-            </Field>
-          </div>
         </form>
       </Modal>
 

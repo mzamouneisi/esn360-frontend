@@ -53,14 +53,14 @@ export function Dashboard() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Utilisateurs" value={data.totalUsers ?? 0} to="/utilisateurs" />
               <StatCard label="Sociétés" value={data.totalSocs ?? 0} to="/soc" />
-              <StatCard label="Consultants" value={data.totalConsultants ?? 0} to="/consultants" />
+              <StatCard label="Collaborateurs" value={data.totalConsultants ?? 0} to="/consultants" />
               <StatCard label="Abonnements actifs" value={data.activeSubscriptions ?? 0} to="/soc" />
             </div>
           )}
 
           {(user.role === 'RESPONSIBLE_SOC' || user.role === 'MANAGER') && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <StatCard label="Consultants" value={data.consultants ?? 0} to="/consultants" />
+              <StatCard label="Collaborateurs" value={data.consultants ?? 0} to="/consultants" />
               <StatCard
                 label="Notes de frais en attente"
                 value={data.pendingNoteFrais ?? 0}

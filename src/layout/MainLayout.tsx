@@ -132,7 +132,7 @@ export function MainLayout() {
         { to: '/projets', label: 'Projets', icon: ICONS.projects },
         { to: '/types-activites', label: 'Types d’activités', icon: ICONS.activities },
         { to: '/activites', label: 'Activités & tarifs', icon: ICONS.activities },
-        { to: '/consultants', label: 'Consultants', icon: ICONS.consultants },
+        { to: '/consultants', label: 'Collaborateurs', icon: ICONS.consultants },
         { to: '/missions', label: 'Missions', icon: ICONS.missions },
       ],
     },
