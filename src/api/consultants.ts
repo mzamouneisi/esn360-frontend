@@ -10,6 +10,7 @@ export const consultantsApi = {
     size?: number
   }) => api.get<PageResponse<ConsultantDto>>('/consultants', params),
   summaries: (socId: number) => api.get<ConsultantSummary[]>('/consultants/summaries', { socId }),
+  managed: () => api.get<ConsultantSummary[]>('/consultants/managed'),
   managers: (socId: number) => api.get<ManagerSummary[]>('/consultants/managers', { socId }),
   getById: (id: number) => api.get<ConsultantDto>(`/consultants/${id}`),
   create: (request: ConsultantRequest) => api.post<ConsultantDto>('/consultants', request),

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, useMemo, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { fichePaieApi } from '../api/fichePaie'
 import { consultantsApi } from '../api/consultants'
@@ -34,7 +34,8 @@ const emptyForm: FormState = {
 export function FichePaie() {
   const { user } = useAuth()
   const isConsultant = user?.role === 'CONSULTANT'
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC'
+  const isManager = user?.role === 'MANAGER'
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || isManager
 
   const { data, loading, error, reload, setData } = useAsync(
     () =>
@@ -47,8 +48,13 @@ export function FichePaie() {
   )
 
   const { data: summaries } = useAsync(
-    () => (user?.socId ? consultantsApi.summaries(user.socId) : Promise.resolve([])),
-    [user?.socId],
+    () =>
+      isManager
+        ? consultantsApi.managed()
+        : user?.socId
+          ? consultantsApi.summaries(user.socId)
+          : Promise.resolve([]),
+    [user?.socId, isManager],
   )
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -56,7 +62,23 @@ export function FichePaie() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [uploadingId, setUploadingId] = useState<number | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const years = useMemo(() => {
+    const ys = new Set<number>()
+    for (const fp of data ?? []) {
+      const y = Number((fp.period ?? '').slice(0, 4))
+      if (Number.isFinite(y) && y > 0) ys.add(y)
+    }
+    return [...ys].sort((a, b) => b - a)
+  }, [data])
+
+  const activeYear = selectedYear ?? years[0] ?? null
+  const yearData = useMemo(
+    () => (data ?? []).filter((fp) => Number((fp.period ?? '').slice(0, 4)) === activeYear),
+    [data, activeYear],
+  )
 
   if (!user) return null
 
@@ -122,7 +144,7 @@ export function FichePaie() {
     }
   }
 
-  const totalNet = (data ?? []).reduce((sum, fp) => sum + fp.netSalary, 0)
+  const totalNet = (yearData ?? []).reduce((sum, fp) => sum + fp.netSalary, 0)
 
   return (
     <div>
@@ -144,18 +166,36 @@ export function FichePaie() {
       />
 
       <Card className="mb-6 p-5">
-        <p className="text-sm font-medium text-gray-500">Total net {new Date().getFullYear()}</p>
+        <p className="text-sm font-medium text-gray-500">Total net {activeYear ?? new Date().getFullYear()}</p>
         <p className="mt-2 text-2xl font-bold text-gray-900">{formatMoney(totalNet)}</p>
       </Card>
+
+      {years.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {years.map((y) => (
+            <button
+              key={y}
+              onClick={() => setSelectedYear(y)}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                y === activeYear
+                  ? 'bg-brand-600 text-white'
+                  : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <ErrorBlock message={error} />}
       {loading && <LoadingBlock />}
 
-      {!loading && data && data.length > 0 && (
+      {!loading && yearData && yearData.length > 0 && (
         <Table
           paginate
           rowKey={(fp) => fp.id}
-          rows={data}
+          rows={yearData}
           columns={[
             {
               key: 'consultant',
@@ -224,7 +264,7 @@ export function FichePaie() {
         />
       )}
 
-      {!loading && data && data.length === 0 && (
+      {!loading && (!yearData || yearData.length === 0) && (
         <EmptyState
           title="Aucune fiche de paie"
           description={canEdit ? 'Ajoutez la première fiche de paie.' : 'Aucune fiche disponible.'}
