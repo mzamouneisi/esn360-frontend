@@ -255,7 +255,7 @@ export function CraDetail({
     return null
   }
 
-  const editable = cra.status === 'DRAFT' || cra.status === 'REJECTED'
+  const editable = cra.status === 'DRAFT' || cra.status === 'REJECTED' || cra.status === 'CANCELLED'
   const canValidate =
     user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
   const isConsultant = user?.role === 'CONSULTANT'
