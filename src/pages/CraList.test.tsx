@@ -86,6 +86,7 @@ const cra = (overrides: Partial<CraDto> = {}): CraDto => ({
   id: 1,
   consultantId: 10,
   consultantName: 'Alice Martin',
+  managerId: 1,
   month: 8,
   year: 2026,
   type: 'CRA',

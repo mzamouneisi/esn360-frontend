@@ -362,6 +362,7 @@ export interface CraDto {
   id: number
   consultantId: number
   consultantName: string | null
+  managerId: number | null
   month: number
   year: number
   type: string

@@ -244,11 +244,6 @@ export function CraDetail({
   }, [days, cra])
   const craValid = incompleteDays.length === 0
 
-  const allActivitiesValid = useMemo(() => {
-    const acts = days.flatMap((d) => d.activities)
-    return acts.length > 0 && acts.every((a) => a.valid)
-  }, [days])
-
   if (!cra) {
     if (loading) return <LoadingBlock />
     if (error) return <ErrorBlock message={error} />
@@ -257,7 +252,9 @@ export function CraDetail({
 
   const editable = cra.status === 'DRAFT' || cra.status === 'REJECTED' || cra.status === 'CANCELLED'
   const canValidate =
-    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
+    user?.role === 'ADMIN' ||
+    user?.role === 'RESPONSIBLE_SOC' ||
+    (user?.role === 'MANAGER' && cra.managerId === user.id)
   const isConsultant = user?.role === 'CONSULTANT'
 
   // Le consultant ne peut pas modifier une activité validée (le manager peut).
@@ -268,9 +265,8 @@ export function CraDetail({
 
   const isIndispo = cra?.type === 'CONGE'
   const managerCanAct =
-    isIndispo &&
     canValidate &&
-    (cra.status === 'SUBMITTED' || cra.status === 'PENDING_SEND')
+    (cra.status === 'SUBMITTED' || (isIndispo && cra.status === 'PENDING_SEND'))
   const canCancel = isConsultant && isIndispo && cra.status === 'VALIDATED'
 
   function updateDay(index: number, patch: Partial<EditableDay>) {
@@ -453,34 +449,6 @@ export function CraDetail({
       onChange?.()
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    }
-  }
-
-  async function handleMarkPendingSend() {
-    if (!cra) return
-    try {
-      const updated = await crasApi.markPendingSend(cra.id)
-      setData(updated)
-      onChange?.()
-    } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    }
-  }
-
-  async function handleSendIndispo() {
-    if (!cra) return
-    const comment = allActivitiesValid ? null : window.prompt('Commentaire du rejet :')
-    if (!allActivitiesValid && comment === null) return
-    setSending(true)
-    setFormError(null)
-    try {
-      const updated = await crasApi.sendIndispo(cra.id, comment ?? undefined)
-      setData(updated)
-      onChange?.()
-    } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
-    } finally {
-      setSending(false)
     }
   }
 
@@ -953,7 +921,7 @@ export function CraDetail({
             </Button>
           </>
         )}
-        {canValidate && !isIndispo && cra.status === 'SUBMITTED' && (
+        {managerCanAct && (
           <>
             <Button className="w-auto bg-green-600 hover:bg-green-700" onClick={handleValidate}>
               Valider
@@ -964,33 +932,6 @@ export function CraDetail({
             >
               Rejeter
             </InlineButton>
-          </>
-        )}
-        {managerCanAct && (
-          <>
-            <InlineButton onClick={() => setRangeModal('validate')}>
-              Valider une plage
-            </InlineButton>
-            <InlineButton onClick={() => setRangeModal('invalidate')}>
-              Invalider une plage
-            </InlineButton>
-            <Button className="w-auto" onClick={handleMarkPendingSend}>
-              Enregistrer
-            </Button>
-            <Button
-              className={`w-auto ${
-                allActivitiesValid
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-red-600 hover:bg-red-700'
-              }`}
-              onClick={handleSendIndispo}
-              disabled={sending}
-            >
-              {sending ? <Spinner className="border-white border-t-transparent" /> : null}
-              {allActivitiesValid
-                ? "Envoyer l'Indispo Valid"
-                : "Envoyer l'Indispo Rejetée"}
-            </Button>
           </>
         )}
       </div>

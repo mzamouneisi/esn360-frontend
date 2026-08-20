@@ -30,8 +30,10 @@ export function CraList() {
   const [search, setSearch] = useState('')
 
   const isConsultant = user?.role === 'CONSULTANT'
-  const canValidate =
-    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
+  const canValidate = (c: CraDto) =>
+    user?.role === 'ADMIN' ||
+    user?.role === 'RESPONSIBLE_SOC' ||
+    (user?.role === 'MANAGER' && c.managerId === user.id)
 
   const ownCras = useAsync(
     () =>
@@ -292,7 +294,7 @@ export function CraList() {
                               Supprimer
                             </InlineButton>
                           )}
-                          {canValidate && cra.status === 'SUBMITTED' && (
+                          {canValidate(cra) && cra.status === 'SUBMITTED' && (
                             <>
                               <InlineButton
                                 className="border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
