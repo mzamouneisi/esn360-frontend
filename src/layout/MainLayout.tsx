@@ -116,7 +116,7 @@ export function MainLayout() {
   if (!user) return null
 
   const isAdmin = user.role === 'ADMIN'
-  const _LAST_COMMIT_ = '2026_08_19_23_39_39'
+  const _LAST_COMMIT_ = '2026_08_20_14_27_00'
 
   const sections: NavSection[] = [
     {
@@ -180,6 +180,11 @@ export function MainLayout() {
         { to: '/tables', label: 'Base de données', icon: ICONS.tables },
         { to: '/logs', label: 'Logs du serveur', icon: ICONS.logs },
       ],
+    })
+  } else if (user.role === 'RESPONSIBLE_SOC') {
+    sections.push({
+      title: 'Comptes',
+      items: [{ to: '/utilisateurs', label: 'Utilisateurs', icon: ICONS.users }],
     })
   }
 

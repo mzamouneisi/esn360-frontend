@@ -23,7 +23,7 @@ export interface CreateUserRequest {
 }
 
 export const usersApi = {
-  findAll: (params: { page?: number; size?: number; search?: string }) =>
+  findAll: (params: { page?: number; size?: number; search?: string; socId?: number }) =>
     api.get<PageResponse<UserDto>>('/users', params),
   getById: (id: number) => api.get<UserDto>(`/users/${id}`),
   create: (request: CreateUserRequest) => api.post<UserDto>('/users', request),

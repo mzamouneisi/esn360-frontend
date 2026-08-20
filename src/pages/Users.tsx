@@ -44,6 +44,9 @@ interface CreateForm {
 
 export function Users() {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const isResponsible = user?.role === 'RESPONSIBLE_SOC'
+  const restrictedSocId = isResponsible ? user?.socId ?? undefined : undefined
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [page, setPage] = useState(0)
@@ -58,8 +61,8 @@ export function Users() {
   }, [search])
 
   const { data, loading, error, setData, reload } = useAsync(
-    () => usersApi.findAll({ page, size, search: debounced || undefined }),
-    [page, size, debounced],
+    () => usersApi.findAll({ page, size, search: debounced || undefined, socId: restrictedSocId }),
+    [page, size, debounced, restrictedSocId],
   )
 
   const { data: socs } = useAsync(() => socsApi.findAll(), [])
@@ -212,9 +215,11 @@ export function Users() {
         actions={
           <>
             <RefreshButton onClick={reload} />
-            <Button className="w-auto" onClick={openCreate}>
-              + Ajouter un utilisateur
-            </Button>
+            {isAdmin && (
+              <Button className="w-auto" onClick={openCreate}>
+                + Ajouter un utilisateur
+              </Button>
+            )}
           </>
         }
       />
@@ -292,7 +297,7 @@ export function Users() {
                   return (
                     <div className="flex justify-end gap-1">
                       {canModify && <InlineButton onClick={() => openEdit(u)}>Modifier</InlineButton>}
-                      {canDelete && (
+                      {isAdmin && canDelete && (
                         <InlineButton
                           className="text-red-600 hover:bg-red-50 disabled:opacity-40"
                           disabled={u.active}
@@ -360,7 +365,7 @@ export function Users() {
                   disabled={editing.user.username === 'admin' && editing.user.id === user?.id}
                   onChange={(e) => updateForm({ role: e.target.value as Role })}
                 >
-                  {ROLE_OPTIONS.map(([value, label]) => (
+                  {ROLE_OPTIONS.filter(([value]) => isAdmin || value !== 'ADMIN').map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
@@ -368,7 +373,11 @@ export function Users() {
                 </Select>
               </Field>
               <Field label="Société">
-                <Select value={editing.form.socId} onChange={(e) => updateForm({ socId: e.target.value })}>
+                <Select
+                  value={editing.form.socId}
+                  disabled={isResponsible && editing.user.socId === user?.socId}
+                  onChange={(e) => updateForm({ socId: e.target.value })}
+                >
                   <option value="">Aucune</option>
                   {(socs ?? []).map((soc: SocDto) => (
                     <option key={soc.id} value={soc.id}>
