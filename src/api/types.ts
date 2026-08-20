@@ -1,6 +1,6 @@
 export type Role = 'ADMIN' | 'RESPONSIBLE_SOC' | 'MANAGER' | 'CONSULTANT'
 
-export type CraStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING_SEND' | 'VALIDATED' | 'REJECTED'
+export type CraStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING_SEND' | 'VALIDATED' | 'REJECTED' | 'CANCELLED'
 
 export type DayType =
   | 'WORKED'

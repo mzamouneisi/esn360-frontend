@@ -156,6 +156,7 @@ export function CraDetail({
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map())
   const [rangeModal, setRangeModal] = useState<'validate' | 'invalidate' | null>(null)
   const [sending, setSending] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   useEffect(() => {
     if (cra) setDays(cra.days.map(dayToEditable))
@@ -270,6 +271,7 @@ export function CraDetail({
     isIndispo &&
     canValidate &&
     (cra.status === 'SUBMITTED' || cra.status === 'PENDING_SEND')
+  const canCancel = isConsultant && isIndispo && cra.status === 'VALIDATED'
 
   function updateDay(index: number, patch: Partial<EditableDay>) {
     setDays((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)))
@@ -482,6 +484,22 @@ export function CraDetail({
     }
   }
 
+  async function handleCancel(comment: string) {
+    if (!cra) return
+    setSending(true)
+    setFormError(null)
+    try {
+      const updated = await crasApi.cancel(cra.id, comment)
+      setData(updated)
+      onChange?.()
+      setCancelOpen(false)
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSending(false)
+    }
+  }
+
   function handleDeleteAll() {
     if (!window.confirm('Supprimer tous les événements ajoutés ?')) return
     removeAllEvents()
@@ -614,6 +632,12 @@ export function CraDetail({
       {cra.status === 'REJECTED' && cra.comment && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <strong>Rejeté :</strong> {cra.comment}
+        </div>
+      )}
+
+      {cra.status === 'CANCELLED' && cra.comment && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <strong>Annulée :</strong> {cra.comment}
         </div>
       )}
 
@@ -961,6 +985,14 @@ export function CraDetail({
             </Button>
           </>
         )}
+        {canCancel && (
+          <InlineButton
+            className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+            onClick={() => setCancelOpen(true)}
+          >
+            Annuler
+          </InlineButton>
+        )}
       </div>
 
       {fillMonthOpen && (
@@ -1018,6 +1050,14 @@ export function CraDetail({
             setRangeModal(null)
           }}
           onClose={() => setRangeModal(null)}
+        />
+      )}
+
+      {cancelOpen && (
+        <CancelModal
+          submitting={sending}
+          onConfirm={(comment) => void handleCancel(comment)}
+          onClose={() => setCancelOpen(false)}
         />
       )}
     </div>
@@ -1396,6 +1436,50 @@ function RangeValidModal({
           />
         </Field>
       </div>
+    </Modal>
+  )
+}
+
+function CancelModal({
+  submitting,
+  onConfirm,
+  onClose,
+}: {
+  submitting?: boolean
+  onConfirm: (comment: string) => void
+  onClose: () => void
+}) {
+  const [comment, setComment] = useState('')
+  const canSubmit = comment.trim().length > 0
+  return (
+    <Modal
+      open
+      title="Annuler l'Indispo"
+      onClose={onClose}
+      footer={
+        <>
+          <InlineButton onClick={onClose}>Annuler</InlineButton>
+          <Button
+            className="w-auto bg-red-600 hover:bg-red-700"
+            onClick={() => onConfirm(comment.trim())}
+            disabled={!canSubmit || submitting}
+          >
+            {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
+            Confirmer l'annulation
+          </Button>
+        </>
+      }
+    >
+      <p className="mb-3 text-sm text-gray-500">
+        Indiquez le motif de l'annulation (obligatoire) :
+      </p>
+      <Field label="Commentaire *">
+        <Input
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Motif de l'annulation"
+        />
+      </Field>
     </Modal>
   )
 }

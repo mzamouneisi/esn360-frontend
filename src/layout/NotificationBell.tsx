@@ -80,6 +80,7 @@ export function NotificationBell() {
     setOpen(false)
     if (!notification.read) {
       notificationsApi.markRead(notification.id).catch(() => {})
+      setUnread((n) => Math.max(0, n - 1))
     }
     if (notification.link) {
       navigate(notification.link)

@@ -81,6 +81,7 @@ export const CRA_STATUS_LABELS: Record<CraStatus, string> = {
   PENDING_SEND: 'En attente d’envoi',
   VALIDATED: 'Validé',
   REJECTED: 'Rejeté',
+  CANCELLED: 'Annulé',
 }
 
 export const NOTE_FRAIS_STATUS_LABELS: Record<NoteFraisStatus, string> = {
@@ -186,6 +187,8 @@ export function statusBadge(status: string): string {
     case 'OPEN':
       return 'muted'
     case 'WARNING':
+      return 'warning'
+    case 'CANCELLED':
       return 'warning'
     default:
       return 'muted'

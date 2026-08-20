@@ -32,6 +32,8 @@ export const crasApi = {
   markPendingSend: (id: number) => api.post<CraDto>(`/cras/${id}/indispo/save`),
   sendIndispo: (id: number, comment?: string) =>
     api.post<CraDto>(`/cras/${id}/indispo/send`, { comment: comment ?? null }),
+  cancel: (id: number, comment: string) =>
+    api.post<CraDto>(`/cras/${id}/cancel`, { comment }),
   exportCsv: (params: { socId?: number; month: number; year: number }) =>
     api.download(`/cras/export/csv?month=${params.month}&year=${params.year}${params.socId ? `&socId=${params.socId}` : ''}`, `cra-${params.month}-${params.year}.csv`),
   exportPdf: (params: { socId?: number; month: number; year: number }) =>
