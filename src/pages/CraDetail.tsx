@@ -517,7 +517,7 @@ export function CraDetail({
             {onClose ? '← Fermer' : '← Retour aux CRA'}
           </button>
           <h2 className="mt-1 text-2xl font-bold text-gray-900">
-            CRA de {cra.consultantName ?? '—'}
+            {cra.type === 'CONGE' ? 'Congé de ' : 'CRA de '}{cra.consultantName ?? '—'}
           </h2>
           <p className="text-sm text-gray-500">
             {MONTHS_FR[cra.month - 1]} {cra.year}
@@ -896,7 +896,6 @@ export function CraDetail({
           day={days[eventModal]}
           editable={editable}
           activities={filteredActivities}
-          onUpdate={(patch) => updateDay(eventModal, patch)}
           onUpdateActivity={(actIndex, patch) => updateActivity(eventModal, actIndex, patch)}
           onAddActivity={() => addActivity(eventModal)}
           onRemoveActivity={(actIndex) => removeActivity(eventModal, actIndex)}
@@ -1086,7 +1085,6 @@ function EventModal({
   day,
   editable,
   activities,
-  onUpdate,
   onUpdateActivity,
   onAddActivity,
   onRemoveActivity,
@@ -1095,7 +1093,6 @@ function EventModal({
   day: EditableDay
   editable: boolean
   activities: ActivityDto[]
-  onUpdate: (patch: Partial<EditableDay>) => void
   onUpdateActivity: (actIndex: number, patch: Partial<EditableActivity>) => void
   onAddActivity: () => void
   onRemoveActivity: (actIndex: number) => void
@@ -1120,21 +1117,6 @@ function EventModal({
     >
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          {editable ? (
-            <Select
-              className="w-40"
-              value={day.dayType}
-              onChange={(e) => onUpdate({ dayType: e.target.value as DayType })}
-            >
-              {DAY_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {DAY_TYPE_LABELS[t]}
-                </option>
-              ))}
-            </Select>
-          ) : (
-            <span className="text-sm">{DAY_TYPE_LABELS[day.dayType]}</span>
-          )}
           <span className={`text-sm font-semibold ${dayIsValid(day) ? 'text-green-600' : 'text-red-500'}`}>
             {formatDays(total)}
             {day.dayType === 'WORKED' && !dayIsValid(day) ? ' — doit totaliser 1 jour' : ''}
