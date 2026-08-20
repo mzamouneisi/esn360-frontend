@@ -14,42 +14,39 @@ import {
 import { useAsync } from '../lib/useAsync'
 import { CraDetail } from './CraDetail'
 
-
 function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
   const total = year * 12 + (month - 1) + delta
   return { year: Math.floor(total / 12), month: (total % 12) + 1 }
 }
 
-export function CraList() {
+export function IndispoList() {
   const { user } = useAuth()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [page, setPage] = useState(0)
-  const [openCraId, setOpenCraId] = useState<number | null>(null)
+  const [openId, setOpenId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
 
   const isConsultant = user?.role === 'CONSULTANT'
-  const canValidate =
-    user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
 
-  const ownCras = useAsync(
+  const own = useAsync(
     () =>
       user?.consultantId
-        ? crasApi.findByConsultant(user.consultantId, year)
+        ? crasApi.findByConsultant(user.consultantId, year, 'CONGE')
         : Promise.resolve([] as CraDto[]),
     [user?.consultantId, year],
   )
 
-  const socCras = useAsync(
+  const soc = useAsync(
     () =>
       user?.socId
-        ? crasApi.findBySocYear(user.socId, year)
+        ? crasApi.findBySocYear(user.socId, year, 'CONGE')
         : Promise.resolve([] as CraDto[]),
     [user?.socId, year],
   )
 
-  const { data, loading, error, reload } = isConsultant ? ownCras : socCras
+  const { data, loading, error, reload } = isConsultant ? own : soc
 
   useEffect(() => {
     setPage(0)
@@ -65,20 +62,21 @@ export function CraList() {
     const status = (CRA_STATUS_LABELS[c.status] ?? c.status).toLowerCase()
     return yearMonth.includes(q) || consultant.includes(q) || status.includes(q)
   })
-  const totalPages = Math.max(1, Math.ceil(list.length / (user?.pageSize ?? 5)))
+  const pageSize = user?.pageSize ?? 5
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize))
   const safePage = Math.min(page, totalPages - 1)
-  const pageItems = list.slice(safePage * (user?.pageSize ?? 5), safePage * (user?.pageSize ?? 5) + (user?.pageSize ?? 5))
+  const pageItems = list.slice(safePage * pageSize, safePage * pageSize + pageSize)
 
-  const editable = (c: CraDto) => c.status !== 'SUBMITTED' && c.status !== 'VALIDATED'
+  const editable = (c: CraDto) => c.status !== 'SUBMITTED' && c.status !== 'PENDING_SEND' && c.status !== 'VALIDATED'
 
   function openPeriod(newYear: number, newMonth: number) {
     const sameYear = newYear === year
     setYear(newYear)
     setMonth(newMonth)
-    setOpenCraId(null)
+    setOpenId(null)
     if (isConsultant && sameYear) {
-      const cra = (data ?? []).find((c) => c.month === newMonth)
-      if (cra) setOpenCraId(cra.id)
+      const ind = (data ?? []).find((c) => c.month === newMonth)
+      if (ind) setOpenId(ind.id)
     }
   }
 
@@ -96,73 +94,27 @@ export function CraList() {
     void openPeriod(p.year, p.month)
   }
 
-  async function changeStatus(id: number, action: 'validate' | 'reject') {
-    if (action === 'reject') {
-      const comment = window.prompt('Motif du rejet :')
-      if (comment === null) return
-      try {
-        await crasApi.reject(id, comment)
-      } catch (err) {
-        window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
-        return
-      }
-    } else {
-      try {
-        await crasApi.validate(id)
-      } catch (err) {
-        window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
-        return
-      }
-    }
-    reload()
-  }
-
   async function handleDelete(c: CraDto) {
     if (
       !window.confirm(
-        `Supprimer le CRA de ${c.consultantName ?? '—'} (${MONTHS_FR[c.month - 1]} ${c.year}) ?`,
+        `Supprimer l'Indispo de ${c.consultantName ?? '—'} (${MONTHS_FR[c.month - 1]} ${c.year}) ?`,
       )
     )
       return
     try {
       await crasApi.delete(c.id)
-      if (openCraId === c.id) setOpenCraId(null)
+      if (openId === c.id) setOpenId(null)
       reload()
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
     }
   }
 
-  async function findFreePeriod(): Promise<{ year: number; month: number }> {
-    const consultantId = user?.consultantId
-    if (!consultantId) return { year, month }
-    let y = year
-    let m = month
-    for (let i = 0; i < 24; i++) {
-      const cras = y === year ? (data ?? []) : await crasApi.findByConsultant(consultantId, y)
-      const cra = cras.find((c) => c.year === y && c.month === m && c.type === 'CRA')
-      if (!cra || cra.status === 'DRAFT' || cra.status === 'REJECTED') {
-        return { year: y, month: m }
-      }
-      m++
-      if (m > 12) {
-        m = 1
-        y++
-      }
-    }
-    return { year, month }
-  }
-
-  async function createCra(type: string) {
+  async function createIndispo() {
     if (!user?.consultantId) return
     try {
-      const period = await findFreePeriod()
-      const cra = await crasApi.getOrCreate(user.consultantId, period.year, period.month, type)
-      setOpenCraId(cra.id)
-      if (period.year !== year || period.month !== month) {
-        setYear(period.year)
-        setMonth(period.month)
-      }
+      const ind = await crasApi.getOrCreate(user.consultantId, year, month, 'CONGE')
+      setOpenId(ind.id)
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Erreur inattendue')
     }
@@ -171,17 +123,15 @@ export function CraList() {
   return (
     <div>
       <PageHeader
-        title="CRA"
-        subtitle="Comptes rendus d'activité par consultant et par mois"
+        title="Indispos"
+        subtitle="Congés du consultant par mois"
         actions={
-          <>
-            <InlineButton onClick={reload} title="Recharger la liste des CRA">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 8 8 1 1 0 0 0-2 0 6 6 0 1 1-6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z" />
-              </svg>
-              Actualiser
-            </InlineButton>
-          </>
+          <InlineButton onClick={reload} title="Recharger la liste des Indispos">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 8 8 1 1 0 0 0-2 0 6 6 0 1 1-6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z" />
+            </svg>
+            Actualiser
+          </InlineButton>
         }
       />
 
@@ -201,14 +151,14 @@ export function CraList() {
       {!loading && list.length === 0 && (
         <Card className="flex flex-col items-center justify-center py-14">
           <p className="text-sm font-medium text-gray-900">
-            {search.trim() ? 'Aucun CRA ne correspond au filtre' : 'Aucun CRA pour cette année'}
+            {search.trim() ? 'Aucune Indispo ne correspond au filtre' : 'Aucune Indispo pour cette année'}
           </p>
           <p className="mt-1 text-sm text-gray-500">
             {search.trim()
               ? 'Modifiez votre recherche.'
               : isConsultant
-                ? 'Cliquez sur « Nouveau Cra » pour créer votre CRA.'
-                : 'Aucun CRA saisi.'}
+                ? 'Cliquez sur « Nouvelle Indispo » pour créer votre Indispo.'
+                : 'Aucune Indispo saisie.'}
           </p>
         </Card>
       )}
@@ -233,10 +183,10 @@ export function CraList() {
                       Jours
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Soumis le
+                      Soumise le
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Validé le
+                      Validée le
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Commentaire
@@ -247,66 +197,48 @@ export function CraList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {pageItems.map((cra) => (
+                  {pageItems.map((ind) => (
                     <tr
-                      key={cra.id}
+                      key={ind.id}
                       className={`align-top ${
-                        cra.id === openCraId
+                        ind.id === openId
                           ? '[&>td]:border-y-2 [&>td]:border-blue-400 [&>td:first-child]:border-l-2 [&>td:last-child]:border-r-2 [&>td]:bg-blue-50'
-                          : cra.type === 'CONGE'
-                            ? 'bg-yellow-100'
-                            : 'even:bg-gray-50'
+                          : 'bg-yellow-50 even:bg-yellow-100'
                       }`}
                     >
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                        {cra.year}-{String(cra.month).padStart(2, '0')}
+                        {ind.year}-{String(ind.month).padStart(2, '0')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {cra.consultantName ?? '—'}
+                        {ind.consultantName ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge kind={statusBadge(cra.status)}>
-                          {CRA_STATUS_LABELS[cra.status] ?? cra.status}
+                        <Badge kind={statusBadge(ind.status)}>
+                          {CRA_STATUS_LABELS[ind.status] ?? ind.status}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{cra.totalWorkedDays} j</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{ind.totalWorkedDays} j</td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {formatDate(cra.submittedAt)}
+                        {formatDate(ind.submittedAt)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {formatDate(cra.validatedAt)}
+                        {formatDate(ind.validatedAt)}
                       </td>
                       <td className="max-w-64 px-4 py-3 text-sm text-gray-600">
-                        {cra.comment ?? '—'}
+                        {ind.comment ?? '—'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
-                          <InlineButton onClick={() => setOpenCraId(cra.id)}>
-                            {editable(cra) ? 'Éditer' : 'Ouvrir'}
+                          <InlineButton onClick={() => setOpenId(ind.id)}>
+                            {editable(ind) ? 'Éditer' : 'Ouvrir'}
                           </InlineButton>
-                          {editable(cra) && (
+                          {editable(ind) && (
                             <InlineButton
                               className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                              onClick={() => handleDelete(cra)}
+                              onClick={() => handleDelete(ind)}
                             >
                               Supprimer
                             </InlineButton>
-                          )}
-                          {canValidate && cra.status === 'SUBMITTED' && (
-                            <>
-                              <InlineButton
-                                className="border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                                onClick={() => changeStatus(cra.id, 'validate')}
-                              >
-                                Valider
-                              </InlineButton>
-                              <InlineButton
-                                className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                                onClick={() => changeStatus(cra.id, 'reject')}
-                              >
-                                Rejeter
-                              </InlineButton>
-                            </>
                           )}
                         </div>
                       </td>
@@ -377,18 +309,18 @@ export function CraList() {
 
       {isConsultant && user.consultantId && (
         <div className="mt-4 flex items-center justify-center gap-3">
-          <Button className="w-auto" onClick={() => createCra('CRA')}>
-            Nouveau Cra
+          <Button className="w-auto" variant="yellow" onClick={createIndispo}>
+            Nouvelle Indispo
           </Button>
         </div>
       )}
 
-      {openCraId != null && (
+      {openId != null && (
         <div className="mt-6">
           <CraDetail
-            id={openCraId}
+            id={openId}
             onClose={() => {
-              setOpenCraId(null)
+              setOpenId(null)
               reload()
             }}
             onChange={reload}

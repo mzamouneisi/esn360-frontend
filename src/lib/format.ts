@@ -78,6 +78,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const CRA_STATUS_LABELS: Record<CraStatus, string> = {
   DRAFT: 'Brouillon',
   SUBMITTED: 'Soumis',
+  PENDING_SEND: 'En attente d’envoi',
   VALIDATED: 'Validé',
   REJECTED: 'Rejeté',
 }
@@ -172,6 +173,7 @@ export function statusBadge(status: string): string {
     case 'RESOLVED':
       return 'success'
     case 'SUBMITTED':
+    case 'PENDING_SEND':
     case 'IN_PROGRESS':
     case 'TRIAL':
       return 'info'

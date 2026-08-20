@@ -20,9 +20,11 @@ import type { CraDto, DayType, ActivityDto, CraExchangeDto } from '../api/types'
 import type { ReactNode } from 'react'
 
 interface EditableActivity {
+  id: string
   activityId: string
   days: string
   comment: string
+  valid: boolean
 }
 
 interface EditableDay {
@@ -44,9 +46,11 @@ function dayToEditable(day: CraDto['days'][number]): EditableDay {
     workedHours: day.workedHours != null ? String(day.workedHours) : '',
     comment: day.comment ?? '',
     activities: day.activities.map((a) => ({
+      id: String(a.id),
       activityId: String(a.activityId),
       days: a.days != null ? String(a.days) : '1',
       comment: a.comment ?? '',
+      valid: a.valid ?? false,
     })),
   }
 }
@@ -90,11 +94,13 @@ function ActivityChip({
   color,
   name,
   days,
+  valid,
   onClick,
 }: {
   color?: string | null
   name: string
   days: number
+  valid?: boolean
   onClick?: () => void
 }) {
   return (
@@ -108,6 +114,7 @@ function ActivityChip({
         style={{ backgroundColor: color ?? '#9ca3af' }}
       />
       <span className="truncate">{name}</span>
+      {valid && <span className="shrink-0 text-green-600">✓</span>}
       <span className="ml-auto shrink-0 text-gray-400">×{days}</span>
     </button>
   )
@@ -147,6 +154,8 @@ export function CraDetail({
   const [exchanges, setExchanges] = useState<CraExchangeDto[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map())
+  const [rangeModal, setRangeModal] = useState<'validate' | 'invalidate' | null>(null)
+  const [sending, setSending] = useState(false)
 
   useEffect(() => {
     if (cra) setDays(cra.days.map(dayToEditable))
@@ -191,9 +200,9 @@ export function CraDetail({
   const filteredActivities = useMemo(() => {
     const acts = activities ?? []
     if (cra?.type === 'CONGE') {
-      return acts.filter((a) => a.type?.code?.startsWith('CONGE'))
+      return acts.filter((a) => a.indispo)
     }
-    return acts
+    return acts.filter((a) => !a.indispo)
   }, [activities, cra?.type])
 
   const currentActivity = useMemo(() => {
@@ -234,6 +243,11 @@ export function CraDetail({
   }, [days, cra])
   const craValid = incompleteDays.length === 0
 
+  const allActivitiesValid = useMemo(() => {
+    const acts = days.flatMap((d) => d.activities)
+    return acts.length > 0 && acts.every((a) => a.valid)
+  }, [days])
+
   if (!cra) {
     if (loading) return <LoadingBlock />
     if (error) return <ErrorBlock message={error} />
@@ -243,6 +257,19 @@ export function CraDetail({
   const editable = cra.status === 'DRAFT' || cra.status === 'REJECTED'
   const canValidate =
     user?.role === 'ADMIN' || user?.role === 'RESPONSIBLE_SOC' || user?.role === 'MANAGER'
+  const isConsultant = user?.role === 'CONSULTANT'
+
+  // Le consultant ne peut pas modifier une activité validée (le manager peut).
+  function canModifyActivity(act: EditableActivity): boolean {
+    if (!isConsultant) return true
+    return !act.valid
+  }
+
+  const isIndispo = cra?.type === 'CONGE'
+  const managerCanAct =
+    isIndispo &&
+    canValidate &&
+    (cra.status === 'SUBMITTED' || cra.status === 'PENDING_SEND')
 
   function updateDay(index: number, patch: Partial<EditableDay>) {
     setDays((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)))
@@ -284,14 +311,16 @@ export function CraDetail({
         i === dayIndex
           ? {
               ...d,
-              activities: [
-                ...d.activities,
-                {
-                  activityId: currentActivity ? String(currentActivity.id) : '',
-                  days: defaultDays,
-                  comment: '',
-                },
-              ],
+               activities: [
+                 ...d.activities,
+                 {
+                   id: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                   activityId: currentActivity ? String(currentActivity.id) : '',
+                   days: defaultDays,
+                   comment: '',
+                   valid: false,
+                 },
+               ],
             }
           : d,
       ),
@@ -394,15 +423,62 @@ export function CraDetail({
     }
   }
 
-  async function handleConvertToCra() {
+  async function handleToggleValid(cdaId: number, valid: boolean) {
     if (!cra) return
-    if (!window.confirm('Convertir ce congé en CRA ?')) return
     try {
-      const updated = await crasApi.convertToCra(cra.id)
+      const updated = valid
+        ? await crasApi.setActivityValid(cra.id, cdaId)
+        : await crasApi.setActivityInvalid(cra.id, cdaId)
       setData(updated)
       onChange?.()
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function handleRange(action: 'validate' | 'invalidate', start: string, end: string) {
+    if (!cra) return
+    if (!start || !end) {
+      setFormError('Indiquez les dates de début et de fin.')
+      return
+    }
+    try {
+      const updated =
+        action === 'validate'
+          ? await crasApi.validateRange(cra.id, start, end)
+          : await crasApi.invalidateRange(cra.id, start, end)
+      setData(updated)
+      onChange?.()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function handleMarkPendingSend() {
+    if (!cra) return
+    try {
+      const updated = await crasApi.markPendingSend(cra.id)
+      setData(updated)
+      onChange?.()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    }
+  }
+
+  async function handleSendIndispo() {
+    if (!cra) return
+    const comment = allActivitiesValid ? null : window.prompt('Commentaire du rejet :')
+    if (!allActivitiesValid && comment === null) return
+    setSending(true)
+    setFormError(null)
+    try {
+      const updated = await crasApi.sendIndispo(cra.id, comment ?? undefined)
+      setData(updated)
+      onChange?.()
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Erreur inattendue')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -457,7 +533,7 @@ export function CraDetail({
           if (d.activities.length > 0) return d
           return {
             ...d,
-            activities: [{ activityId, days: '1', comment: '' }],
+            activities: [{ id: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`, activityId, days: '1', comment: '', valid: false }],
           }
         }),
       )
@@ -489,7 +565,7 @@ export function CraDetail({
         if (d.activities.length > 0) return d
         return {
           ...d,
-          activities: [{ activityId, days: '1', comment: '' }],
+          activities: [{ id: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`, activityId, days: '1', comment: '', valid: false }],
         }
       }),
     )
@@ -509,13 +585,13 @@ export function CraDetail({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <button
-            onClick={() => (onClose ? onClose() : navigate('/cras'))}
+            onClick={() => (onClose ? onClose() : navigate(cra.type === 'CONGE' ? '/indispos' : '/cras'))}
             className="text-sm font-medium text-brand-600 hover:text-brand-700"
           >
-            {onClose ? '← Fermer' : '← Retour aux CRA'}
+            {onClose ? '← Fermer' : cra.type === 'CONGE' ? '← Retour aux Indispos' : '← Retour aux CRA'}
           </button>
           <h2 className="mt-1 text-2xl font-bold text-gray-900">
-            {cra.type === 'CONGE' ? 'Congé de ' : 'CRA de '}{cra.consultantName ?? '—'}
+            {cra.type === 'CONGE' ? 'Indispo de ' : 'CRA de '}{cra.consultantName ?? '—'}
           </h2>
           <p className="text-sm text-gray-500">
             {MONTHS_FR[cra.month - 1]} {cra.year}
@@ -527,11 +603,6 @@ export function CraDetail({
             {CRA_STATUS_LABELS[cra.status] ?? cra.status}
           </Badge>
           <span className="text-sm text-gray-500">{cra.totalWorkedDays} j</span>
-          {cra.type === 'CONGE' && editable && (
-            <InlineButton onClick={handleConvertToCra}>
-              Convertir en CRA
-            </InlineButton>
-          )}
           <InlineButton onClick={openHistory}>Historique</InlineButton>
           <InlineButton onClick={handleExportClientPdf}>Export Pdf Client</InlineButton>
           <InlineButton onClick={handleExportCompanyPdf}>Export Pdf Ma Societe</InlineButton>
@@ -650,8 +721,11 @@ export function CraDetail({
                           color={info?.type?.color}
                           name={info?.name ?? 'Activité inconnue'}
                           days={Number(act.days) || 0}
+                          valid={act.valid}
                           onClick={
-                            editable && dayIndex >= 0 ? () => setEventModal(dayIndex) : undefined
+                            editable && canModifyActivity(act) && dayIndex >= 0
+                              ? () => setEventModal(dayIndex)
+                              : undefined
                           }
                         />
                       )
@@ -754,7 +828,7 @@ export function CraDetail({
                         <div className="space-y-2">
                           {day.activities.map((act, j) => (
                             <div key={j} className="flex flex-wrap items-center gap-2">
-                              {editable ? (
+                              {editable && canModifyActivity(act) ? (
                                 <>
                                   <Select
                                     className="w-48"
@@ -793,6 +867,7 @@ export function CraDetail({
                                 <span className="text-sm">
                                   {activityMap.get(act.activityId)?.name ?? 'Activité inconnue'} ·{' '}
                                   {formatDays(Number(act.days) || 0)}
+                                  {act.valid ? ' ✓' : ''}
                                 </span>
                               )}
                             </div>
@@ -839,14 +914,14 @@ export function CraDetail({
             <Button
               className="w-auto bg-green-600 hover:bg-green-700"
               onClick={handleSubmit}
-              disabled={submitting || saving || !craValid}
+              disabled={submitting || saving || (isIndispo ? false : !craValid)}
             >
               {submitting ? <Spinner className="border-white border-t-transparent" /> : null}
               Envoyer pour validation
             </Button>
           </>
         )}
-        {canValidate && cra.status === 'SUBMITTED' && (
+        {canValidate && !isIndispo && cra.status === 'SUBMITTED' && (
           <>
             <Button className="w-auto bg-green-600 hover:bg-green-700" onClick={handleValidate}>
               Valider
@@ -857,6 +932,33 @@ export function CraDetail({
             >
               Rejeter
             </InlineButton>
+          </>
+        )}
+        {managerCanAct && (
+          <>
+            <InlineButton onClick={() => setRangeModal('validate')}>
+              Valider une plage
+            </InlineButton>
+            <InlineButton onClick={() => setRangeModal('invalidate')}>
+              Invalider une plage
+            </InlineButton>
+            <Button className="w-auto" onClick={handleMarkPendingSend}>
+              Enregistrer
+            </Button>
+            <Button
+              className={`w-auto ${
+                allActivitiesValid
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
+              onClick={handleSendIndispo}
+              disabled={sending}
+            >
+              {sending ? <Spinner className="border-white border-t-transparent" /> : null}
+              {allActivitiesValid
+                ? "Envoyer l'Indispo Valid"
+                : "Envoyer l'Indispo Rejetée"}
+            </Button>
           </>
         )}
       </div>
@@ -893,11 +995,29 @@ export function CraDetail({
         <EventModal
           day={days[eventModal]}
           editable={editable}
+          isConsultant={isConsultant}
+          managerCanAct={managerCanAct}
           activities={filteredActivities}
           onUpdateActivity={(actIndex, patch) => updateActivity(eventModal, actIndex, patch)}
           onAddActivity={() => addActivity(eventModal)}
           onRemoveActivity={(actIndex) => removeActivity(eventModal, actIndex)}
+          onToggleValid={(cdaId, valid) => void handleToggleValid(cdaId, valid)}
           onClose={() => setEventModal(null)}
+        />
+      )}
+
+      {rangeModal && (
+        <RangeValidModal
+          action={rangeModal}
+          monthStart={`${cra.year}-${String(cra.month).padStart(2, '0')}-01`}
+          monthEnd={`${cra.year}-${String(cra.month).padStart(2, '0')}-${String(
+            new Date(cra.year, cra.month, 0).getDate(),
+          ).padStart(2, '0')}`}
+          onApply={(start, end) => {
+            void handleRange(rangeModal, start, end)
+            setRangeModal(null)
+          }}
+          onClose={() => setRangeModal(null)}
         />
       )}
     </div>
@@ -1082,21 +1202,28 @@ function FillRangeModal({
 function EventModal({
   day,
   editable,
+  isConsultant,
+  managerCanAct,
   activities,
   onUpdateActivity,
   onAddActivity,
   onRemoveActivity,
+  onToggleValid,
   onClose,
 }: {
   day: EditableDay
   editable: boolean
+  isConsultant: boolean
+  managerCanAct: boolean
   activities: ActivityDto[]
   onUpdateActivity: (actIndex: number, patch: Partial<EditableActivity>) => void
   onAddActivity: () => void
   onRemoveActivity: (actIndex: number) => void
+  onToggleValid: (cdaId: number, valid: boolean) => void
   onClose: () => void
 }) {
   const total = dayTotal(day)
+  const canModify = (act: EditableActivity) => !isConsultant || !act.valid
   return (
     <Modal
       open
@@ -1133,7 +1260,7 @@ function EventModal({
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: info?.type?.color ?? '#9ca3af' }}
                 />
-                {editable ? (
+                {editable && canModify(act) ? (
                   <>
                     <Select
                       className="w-56"
@@ -1175,8 +1302,20 @@ function EventModal({
                 ) : (
                   <span className="text-sm">
                     {info?.name ?? 'Activité inconnue'} · {formatDays(Number(act.days) || 0)}
+                    {act.valid ? ' ✓' : ''}
                     {act.comment ? ` — ${act.comment}` : ''}
                   </span>
+                )}
+                {managerCanAct && (
+                  <label className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={act.valid}
+                      onChange={(e) => onToggleValid(Number(act.id), e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    Valid
+                  </label>
                 )}
               </div>
             )
@@ -1197,6 +1336,65 @@ function EventModal({
             + Ajouter un événement
           </button>
         )}
+      </div>
+    </Modal>
+  )
+}
+
+function RangeValidModal({
+  action,
+  monthStart,
+  monthEnd,
+  onApply,
+  onClose,
+}: {
+  action: 'validate' | 'invalidate'
+  monthStart: string
+  monthEnd: string
+  onApply: (start: string, end: string) => void
+  onClose: () => void
+}) {
+  const [start, setStart] = useState(monthStart)
+  const [end, setEnd] = useState(monthEnd)
+  const label = action === 'validate' ? 'Valider' : 'Invalider'
+  return (
+    <Modal
+      open
+      title={`${label} une plage de dates`}
+      onClose={onClose}
+      footer={
+        <>
+          <InlineButton onClick={onClose}>Annuler</InlineButton>
+          <Button className="w-auto" onClick={() => onApply(start, end)}>
+            {label}
+          </Button>
+        </>
+      }
+    >
+      <p className="mb-3 text-sm text-gray-500">
+        {action === 'validate'
+          ? 'Toutes les activités de la plage seront marquées comme validées.'
+          : 'Toutes les activités de la plage seront marquées comme non validées.'}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Date de début">
+          <Input
+            type="date"
+            min={monthStart}
+            max={monthEnd}
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
+        </Field>
+        <Field label="Date de fin">
+          <Input
+            type="date"
+            min={monthStart}
+            max={monthEnd}
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
+        </Field>
       </div>
     </Modal>
   )

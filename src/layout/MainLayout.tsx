@@ -116,7 +116,7 @@ export function MainLayout() {
   if (!user) return null
 
   const isAdmin = user.role === 'ADMIN'
-  const _LAST_COMMIT_ = '2026_08_20_14_27_00'
+  const _LAST_COMMIT_ = '2026_08_20_17_40_17'
 
   const sections: NavSection[] = [
     {
@@ -140,6 +140,7 @@ export function MainLayout() {
       title: 'Activité',
       items: [
         { to: '/cras', label: 'CRA', icon: ICONS.cra },
+        { to: '/indispos', label: 'Indispos', icon: ICONS.holiday },
         { to: '/notes-frais', label: 'Notes de frais', icon: ICONS.expenses },
         { to: '/jours-feries', label: 'Jours fériés', icon: ICONS.holiday },
       ],

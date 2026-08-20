@@ -1,6 +1,6 @@
 export type Role = 'ADMIN' | 'RESPONSIBLE_SOC' | 'MANAGER' | 'CONSULTANT'
 
-export type CraStatus = 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED'
+export type CraStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING_SEND' | 'VALIDATED' | 'REJECTED'
 
 export type DayType =
   | 'WORKED'
@@ -319,6 +319,7 @@ export interface ActivityDto {
   consultant?: { id: number; firstName: string; lastName: string } | null
   soc?: { id: number; name: string } | null
   active: boolean
+  indispo: boolean
 }
 
 export interface ActivityRequest {
@@ -333,6 +334,7 @@ export interface ActivityRequest {
   consultantId?: number | null
   socId: number
   active: boolean
+  indispo?: boolean
 }
 
 export interface CraDayActivityDto {
@@ -342,6 +344,7 @@ export interface CraDayActivityDto {
   activityColor: string | null
   hours: number
   days: number
+  valid: boolean
   comment: string | null
 }
 
@@ -383,6 +386,7 @@ export interface CraDayActivityRequest {
   activityId: number
   hours?: number | null
   days?: number | null
+  valid?: boolean | null
   comment?: string | null
 }
 
