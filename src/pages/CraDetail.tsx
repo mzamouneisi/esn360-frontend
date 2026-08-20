@@ -620,6 +620,14 @@ export function CraDetail({
           <Badge kind={statusBadge(cra.status)}>
             {CRA_STATUS_LABELS[cra.status] ?? cra.status}
           </Badge>
+          {canCancel && (
+            <InlineButton
+              className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+              onClick={() => setCancelOpen(true)}
+            >
+              Annuler
+            </InlineButton>
+          )}
           <span className="text-sm text-gray-500">{cra.totalWorkedDays} j</span>
           <InlineButton onClick={openHistory}>Historique</InlineButton>
           <InlineButton onClick={handleExportClientPdf}>Export Pdf Client</InlineButton>
@@ -984,14 +992,6 @@ export function CraDetail({
                 : "Envoyer l'Indispo Rejetée"}
             </Button>
           </>
-        )}
-        {canCancel && (
-          <InlineButton
-            className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-            onClick={() => setCancelOpen(true)}
-          >
-            Annuler
-          </InlineButton>
         )}
       </div>
 
