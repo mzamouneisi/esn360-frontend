@@ -25,5 +25,7 @@ export const fichePaieApi = {
   },
   download: (id: number, period: string) =>
     api.download(`/fiche-paie/${id}/download`, `fiche-paie-${period}.pdf`),
+  pdf: (id: number, period: string) =>
+    api.download(`/fiche-paie/${id}/pdf`, `fiche-paie-${period}.pdf`),
   delete: (id: number) => api.delete<void>(`/fiche-paie/${id}`),
 }

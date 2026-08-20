@@ -241,6 +241,9 @@ export function FichePaie() {
                   <InlineButton onClick={() => fichePaieApi.download(fp.id, fp.period).catch((err) => window.alert(err.message))}>
                     PDF
                   </InlineButton>
+                  <InlineButton onClick={() => fichePaieApi.pdf(fp.id, fp.period).catch((err) => window.alert(err.message))}>
+                    Générer
+                  </InlineButton>
                   {canEdit && (
                     <>
                       <InlineButton
